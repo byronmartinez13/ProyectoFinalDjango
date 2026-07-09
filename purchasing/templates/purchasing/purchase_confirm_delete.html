@@ -1,0 +1,37 @@
+{% extends 'billing/base.html' %}
+{% block title %}Eliminar Compra #{{ object.id }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0 text-danger">Eliminar Compra</h2>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="max-width: 540px;">
+  <div class="card-header border-0 py-3" style="background: linear-gradient(135deg,#dc3545,#a71d2a);">
+    <span class="text-white fw-bold fs-5">&#9888;&#65039; Confirmar Eliminación</span>
+  </div>
+  <div class="card-body p-4 text-center">
+    <div style="font-size: 3.5rem; line-height: 1;" class="mb-3">&#128465;</div>
+    <h5 class="mb-2">¿Deseas eliminar la Compra #{{ object.id }}?</h5>
+    <p class="text-muted mb-1">
+      <strong>Proveedor:</strong> {{ object.supplier.name }}<br>
+      <strong>Documento:</strong> {{ object.document_number }}<br>
+      <strong>Fecha:</strong> {{ object.purchase_date|date:"d/m/Y" }}<br>
+      <strong>Total:</strong> ${{ object.total }}
+    </p>
+    <p class="text-danger small mt-3">
+      Esta acción es permanente y eliminará todos los detalles asociados.
+      <strong>El stock actualizado no se revertirá automáticamente.</strong>
+    </p>
+  </div>
+  <div class="card-footer bg-light border-0 d-flex gap-2 justify-content-end py-3 px-4">
+    <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-secondary">Cancelar</a>
+    <form method="post" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4">&#128465; Sí, eliminar</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

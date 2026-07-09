@@ -1,0 +1,213 @@
+{% extends 'billing/base.html' %}
+{% load security_tags %}
+{% block title %}Factura #{{ invoice.id }}{% endblock %}
+{% block content %}
+
+<style>
+  .inv-card-header { background: linear-gradient(135deg,#0d6efd,#0a58ca); }
+  .inv-avatar      { width:80px; height:80px; border-radius:50%; background:#0d6efd;
+                     color:#fff; font-size:1.4rem; font-weight:700;
+                     display:flex; align-items:center; justify-content:center; }
+  .nc-badge        { font-size:.8rem; }
+  .inv-summary-box { background: var(--bs-tertiary-bg); }
+</style>
+
+<!-- ── Barra de acciones ───────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0 me-auto">
+    Factura #{{ invoice.id }}
+    <span class="badge {{ invoice.estado_badge_class }} fs-6 ms-2">{{ invoice.get_estado_display }}</span>
+    {% if invoice.estado == invoice.EMITIDA %}
+    <span class="badge {{ invoice.tipo_pago_badge_class }} fs-6 ms-1">{{ invoice.get_tipo_pago_display }}</span>
+    <span class="badge {{ invoice.estado_cobro_badge_class }} fs-6 ms-1">{{ invoice.get_estado_cobro_display }}</span>
+    {% endif %}
+  </h2>
+
+  {% if invoice.can_edit %}
+    <a href="{% url 'billing:invoice_update' invoice.pk %}" class="btn btn-warning btn-sm">&#9998; Editar</a>
+  {% endif %}
+  {% if invoice.can_confirm %}
+    <a href="{% url 'billing:invoice_confirm' invoice.pk %}" class="btn btn-success btn-sm">&#9989; Emitir</a>
+  {% endif %}
+  {% if invoice.can_delete %}
+    <a href="{% url 'billing:invoice_delete' invoice.pk %}" class="btn btn-outline-danger btn-sm">Eliminar borrador</a>
+  {% endif %}
+  {% if invoice.can_cancel %}
+    {% if user|has_group:'Administrador' or user|has_group:'Analista de Compras' or not user|has_any_group %}
+    <a href="{% url 'billing:invoice_cancel' invoice.pk %}" class="btn btn-danger btn-sm">&#128683; Anular</a>
+    {% endif %}
+  {% endif %}
+  {% if invoice.can_credit_note %}
+    <a href="{% url 'billing:credit_note_create' invoice.pk %}" class="btn btn-warning btn-sm">&#128196; Nota de Crédito</a>
+  {% endif %}
+  {% if invoice.tipo_pago == invoice.CREDITO and invoice.estado == invoice.EMITIDA %}
+    {% if invoice.pendiente_de_pago %}
+      <a href="{% url 'creditoventa:cobro_create' invoice.pk %}" class="btn btn-success btn-sm">&#128176; Registrar pago</a>
+    {% endif %}
+    <a href="{% url 'creditoventa:historial_pagos' invoice.pk %}" class="btn btn-outline-primary btn-sm">&#128220; Cobros</a>
+  {% endif %}
+  {% if invoice.can_substitute %}
+    <a href="{% url 'billing:invoice_substitute' invoice.pk %}" class="btn btn-secondary btn-sm">&#128260; Sustituir</a>
+  {% endif %}
+  <a href="{% url 'billing:invoice_pdf' invoice.pk %}" class="btn btn-outline-primary btn-sm" title="Descargar PDF">&#128196; PDF</a>
+</div>
+
+<!-- ── Cuerpo principal ───────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header border-0 py-3 inv-card-header">
+    <span class="text-white fw-bold fs-5">&#128196; Detalle de Factura</span>
+  </div>
+
+  <div class="card-body p-4">
+    <div class="row g-4">
+
+      <!-- Columna izquierda: visual ──────────────────────────── -->
+      <div class="col-md-3 text-center border-end pb-4 pb-md-0">
+        <div class="inv-avatar mx-auto mb-3">#{{ invoice.id }}</div>
+        <p class="text-muted small fw-semibold text-uppercase mb-3">Factura</p>
+
+        <div class="mb-3">
+          <span class="badge rounded-pill bg-primary px-3 py-2">
+            &#128197;&nbsp;{{ invoice.invoice_date|date:"d/m/Y" }}
+          </span>
+        </div>
+        <div class="mb-1 text-muted small">{{ invoice.invoice_date|date:"H:i" }} hrs</div>
+
+        <div class="inv-summary-box rounded-3 p-3 text-start mt-3">
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">Subtotal</small>
+            <span class="fw-semibold">${{ invoice.subtotal }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">IVA</small>
+            <span class="fw-semibold">${{ invoice.tax }}</span>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between">
+            <small class="fw-bold">Total</small>
+            <span class="fw-bold text-primary fs-5">${{ invoice.total }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna derecha: datos y líneas ────────────────────── -->
+      <div class="col-md-9">
+
+        <h6 class="text-muted text-uppercase fw-semibold mb-3 dm-section-label">Información del Cliente</h6>
+        <div class="row g-2 mb-4">
+          <div class="col-sm-6">
+            <div class="dm-field">
+              <small class="dm-label">Nombre completo</small>
+              <div class="dm-value">{{ invoice.customer.full_name }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="dm-field">
+              <small class="dm-label">DNI / RUC</small>
+              <div class="dm-value">{{ invoice.customer.dni }}</div>
+            </div>
+          </div>
+          {% if invoice.customer.email %}
+          <div class="col-sm-6">
+            <div class="dm-field">
+              <small class="dm-label">Email</small>
+              <div class="dm-value">{{ invoice.customer.email }}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% if invoice.customer.phone %}
+          <div class="col-sm-6">
+            <div class="dm-field">
+              <small class="dm-label">Teléfono</small>
+              <div class="dm-value">{{ invoice.customer.phone }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <h6 class="text-muted text-uppercase fw-semibold mb-3 dm-section-label">Detalle de Productos</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Producto</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end">Precio Unit.</th>
+                <th class="text-center">Dto. (%)</th>
+                <th class="text-end">Base</th>
+                <th class="text-end">IVA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for det in invoice.details.all %}
+              <tr>
+                <td>{{ det.product.name }}</td>
+                <td class="text-center">{{ det.quantity }}</td>
+                <td class="text-end">${{ det.unit_price }}</td>
+                <td class="text-center">
+                  {% if det.discount_pct %}
+                    <span class="badge bg-warning text-dark">{{ det.discount_pct }}%</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-end fw-semibold">${{ det.subtotal }}</td>
+                <td class="text-end text-muted">${{ det.tax_amount }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-muted">Sin líneas de detalle.</td></tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="5" class="text-end fw-semibold">Subtotal:</td>
+                <td class="text-end">${{ invoice.subtotal }}</td>
+              </tr>
+              <tr>
+                <td colspan="5" class="text-end fw-semibold">IVA:</td>
+                <td class="text-end">${{ invoice.tax }}</td>
+              </tr>
+              <tr class="table-primary">
+                <td colspan="5" class="text-end fw-bold fs-6">TOTAL:</td>
+                <td class="text-end fw-bold fs-6">${{ invoice.total }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Notas de Crédito ───────────────────────────────────────────── -->
+{% if invoice.credit_notes.exists %}
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header border-0 py-3 bg-warning">
+    <span class="fw-bold text-dark">&#128196; Notas de Crédito asociadas</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>N° NC</th><th>Fecha</th><th>Tipo</th><th class="text-end">Monto</th><th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for nc in invoice.credit_notes.all %}
+        <tr>
+          <td><span class="badge bg-warning text-dark nc-badge">NC-{{ nc.id }}</span></td>
+          <td>{{ nc.date|date:"d/m/Y" }}</td>
+          <td>{{ nc.get_tipo_display }}</td>
+          <td class="text-end fw-semibold">${{ nc.amount }}</td>
+          <td>{{ nc.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

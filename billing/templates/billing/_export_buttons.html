@@ -1,0 +1,14 @@
+<button type="button" class="btn btn-danger btn-sm" onclick="exportList('pdf')">
+  &#128196; PDF
+</button>
+<button type="button" class="btn btn-success btn-sm" onclick="exportList('excel')">
+  &#128202; Excel
+</button>
+<script>
+  function exportList(fmt) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('export', fmt);
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+  }
+</script>

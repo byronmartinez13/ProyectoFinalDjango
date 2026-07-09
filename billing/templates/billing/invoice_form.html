@@ -1,0 +1,397 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10/public/assets/styles/choices.min.css">
+<style>
+  [data-bs-theme="dark"] .choices__inner,
+  [data-bs-theme="dark"] .choices__input {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+  }
+  [data-bs-theme="dark"] .choices__list--dropdown,
+  [data-bs-theme="dark"] .choices__list[aria-expanded] {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+  }
+  [data-bs-theme="dark"] .choices__item { color: var(--bs-body-color); }
+  [data-bs-theme="dark"] .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  [data-bs-theme="dark"] .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background-color: #0d6efd; color: #fff;
+  }
+  .stock-badge-wrap { min-height: 1.2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+  .inv-form-header  { background: linear-gradient(135deg,#0d6efd,#0a58ca); }
+  .inv-det-header   { background: linear-gradient(135deg,#198754,#146c43); }
+  .inv-col-qty      { width: 100px; }
+  .inv-col-price    { width: 130px; }
+  .inv-col-discount { width: 110px; }
+  .inv-col-subtotal { width: 120px; }
+  .inv-col-remove   { width: 60px; }
+  .price-readonly   { background: var(--bs-tertiary-bg); cursor: default; }
+</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">{{ title }}</h2>
+</div>
+
+<form method="post" id="invoice-form">
+  {% csrf_token %}
+
+  <!-- ── Cabecera ──────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header border-0 py-3 inv-form-header">
+      <span class="text-white fw-bold">&#128196; Datos de la Factura</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2 align-items-start">
+            <div class="flex-grow-1">{{ form.customer }}</div>
+            <button type="button" class="btn btn-outline-success btn-sm mt-1"
+                    data-bs-toggle="modal" data-bs-target="#customerModal"
+                    title="Registrar cliente rápido">+ Nuevo</button>
+          </div>
+          {% for error in form.customer.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% if invoice %}
+        <div class="col-md-6 d-flex align-items-end">
+          <span class="badge {{ invoice.estado_badge_class }} fs-6 px-3 py-2">
+            {{ invoice.get_estado_display }}
+          </span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Detalle de Productos ──────────────────────────────────── -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header border-0 py-3 inv-det-header d-flex justify-content-between align-items-center">
+      <span class="text-white fw-bold">&#128717; Detalle de Productos</span>
+      <button type="button" class="btn btn-sm btn-light" id="add-row">+ Agregar Fila</button>
+    </div>
+    <div class="card-body p-0">
+      {{ formset.management_form }}
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm mb-0" id="detail-table">
+          <thead class="table-dark">
+            <tr>
+              <th>Producto</th>
+              <th class="inv-col-qty">Cantidad</th>
+              <th class="inv-col-price">Precio Unit.</th>
+              <th class="inv-col-discount text-center">Dto. (%)</th>
+              <th class="inv-col-subtotal text-end">Subtotal</th>
+              <th class="inv-col-remove text-center">Quitar</th>
+            </tr>
+          </thead>
+          <tbody id="detail-tbody">
+            {% for detail_form in formset %}
+            <tr class="detail-row">
+              <td>
+                {{ detail_form.product }}{{ detail_form.id }}
+                <div class="stock-badge-wrap mt-1"></div>
+                {% for e in detail_form.product.errors %}
+                  <div class="text-danger small">{{ e }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ detail_form.quantity }}
+                {% for e in detail_form.quantity.errors %}
+                  <div class="text-danger small">{{ e }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ detail_form.unit_price }}
+                {% for e in detail_form.unit_price.errors %}
+                  <div class="text-danger small">{{ e }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ detail_form.discount_pct }}
+                {% for e in detail_form.discount_pct.errors %}
+                  <div class="text-danger small">{{ e }}</div>
+                {% endfor %}
+              </td>
+              <td class="text-end fw-semibold row-subtotal align-middle">$0.00</td>
+              <td class="text-center align-middle">
+                <div class="d-none">{{ detail_form.DELETE }}</div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row">&#10005;</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Resumen totales -->
+      <div class="p-3 border-top">
+        <div class="row justify-content-end">
+          <div class="col-md-4">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Subtotal:</span>
+              <span id="summary-sub" class="fw-semibold">$0.00</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">IVA:</span>
+              <span id="summary-tax" class="fw-semibold">$0.00</span>
+            </div>
+            <hr class="my-1">
+            <div class="d-flex justify-content-between">
+              <span class="fw-bold">Total:</span>
+              <span id="summary-total" class="fw-bold text-primary fs-5">$0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Guardar Borrador</button>
+    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+
+<!-- ── Modal nuevo cliente ─────────────────────────────────────── -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header border-0 py-3 inv-form-header">
+        <h5 class="modal-title text-white fw-bold">Nuevo Cliente</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="customerModalErrors" class="alert alert-danger d-none py-2"></div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="qcDni">DNI / RUC <span class="text-danger">*</span></label>
+          <input type="text" id="qcDni" class="form-control" placeholder="Ej. 0912345678" maxlength="13">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="qcFirstName">Nombres <span class="text-danger">*</span></label>
+          <input type="text" id="qcFirstName" class="form-control" placeholder="Nombres del cliente">
+        </div>
+        <div class="mb-0">
+          <label class="form-label fw-semibold" for="qcLastName">Apellidos <span class="text-danger">*</span></label>
+          <input type="text" id="qcLastName" class="form-control" placeholder="Apellidos del cliente">
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveCustomer">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var PRODUCT_DATA = {{ product_data_json|safe }};
+  var tbody      = document.getElementById('detail-tbody');
+  var totalForms = document.getElementById('id_details-TOTAL_FORMS');
+
+  // Capturar HTML del template ANTES de que Choices.js transforme el DOM
+  var _firstRow = tbody.querySelector('.detail-row');
+  window._INV_ROW_TEMPLATE = _firstRow ? _firstRow.cloneNode(true).outerHTML : '';
+
+  function badgeClass(qty, stock) {
+    if (qty > stock)   return 'bg-danger';
+    if (qty === stock) return 'bg-warning text-dark';
+    return 'bg-success';
+  }
+
+  function updateStockBadge(row, pid, qty) {
+    var wrap = row.querySelector('.stock-badge-wrap');
+    if (!wrap) return;
+    if (!pid || !PRODUCT_DATA[pid]) { wrap.innerHTML = ''; return; }
+    var s   = parseInt(PRODUCT_DATA[pid].stock);
+    var cls = badgeClass(qty, s);
+    var msg = qty > s ? ' &#9888; sin stock suficiente' : '';
+    wrap.innerHTML = '<span class="badge ' + cls + ' ms-1">Stock: ' + s + msg + '</span>';
+  }
+
+  function recalcRow(row) {
+    var pid      = row.querySelector('.id-product') ? row.querySelector('.id-product').value : '';
+    var qty      = parseFloat(row.querySelector('.id-qty').value)      || 0;
+    var price    = parseFloat(row.querySelector('.id-price').value)    || 0;
+    var discount = parseFloat(row.querySelector('.id-discount').value) || 0;
+    var taxRate  = (pid && PRODUCT_DATA[pid]) ? parseFloat(PRODUCT_DATA[pid].tax_rate) : 0.15;
+    var sub      = qty * price * (1 - discount / 100);
+    row.querySelector('.row-subtotal').textContent = '$' + sub.toFixed(2);
+    return { sub: sub, tax: sub * taxRate };
+  }
+
+  function recalcAll() {
+    var rows   = tbody.querySelectorAll('.detail-row:not(.deleted-row)');
+    var totSub = 0, totTax = 0;
+    rows.forEach(function (r) { var res = recalcRow(r); totSub += res.sub; totTax += res.tax; });
+    document.getElementById('summary-sub').textContent   = '$' + totSub.toFixed(2);
+    document.getElementById('summary-tax').textContent   = '$' + totTax.toFixed(2);
+    document.getElementById('summary-total').textContent = '$' + (totSub + totTax).toFixed(2);
+  }
+
+  tbody.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('id-product')) return;
+    var row  = e.target.closest('.detail-row');
+    var pid  = e.target.value;
+    var qty  = parseInt(row.querySelector('.id-qty').value) || 0;
+    var priceInput = row.querySelector('.id-price');
+    if (pid && PRODUCT_DATA[pid]) {
+      priceInput.value = PRODUCT_DATA[pid].price;
+    } else {
+      priceInput.value = '';
+    }
+    updateStockBadge(row, pid, qty);
+    recalcAll();
+  });
+
+  tbody.addEventListener('input', function (e) {
+    if (e.target.classList.contains('id-qty')) {
+      var row = e.target.closest('.detail-row');
+      var pid = row.querySelector('.id-product').value;
+      updateStockBadge(row, pid, parseInt(e.target.value) || 0);
+    }
+    if (e.target.classList.contains('id-qty') || e.target.classList.contains('id-discount')) {
+      recalcAll();
+    }
+  });
+
+  tbody.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('remove-row')) return;
+    var rows = tbody.querySelectorAll('.detail-row:not(.deleted-row)');
+    if (rows.length <= 1) {
+      alert('La factura debe tener al menos una línea de detalle.');
+      return;
+    }
+    var row      = e.target.closest('.detail-row');
+    var delInput = row.querySelector('input[name$="-DELETE"]');
+    if (delInput) {
+      delInput.checked = true;
+      row.classList.add('deleted-row');
+      row.style.display = 'none';
+    } else {
+      row.remove();
+      totalForms.value = parseInt(totalForms.value) - 1;
+    }
+    recalcAll();
+  });
+
+  document.getElementById('add-row').addEventListener('click', function () {
+    var idx  = parseInt(totalForms.value);
+    var temp = document.createElement('tbody');
+    temp.innerHTML = window._INV_ROW_TEMPLATE
+      .replace(/details-\d+-/g,    'details-'    + idx + '-')
+      .replace(/id_details-\d+-/g, 'id_details-' + idx + '-');
+    var clone = temp.querySelector('.detail-row');
+    if (!clone) return;
+
+    clone.classList.remove('deleted-row');
+    clone.style.display = '';
+    clone.querySelectorAll('input[type="text"], input[type="number"], select').forEach(function (el) {
+      if (!el.name.endsWith('-id')) el.value = '';
+    });
+    var delInput = clone.querySelector('input[name$="-DELETE"]');
+    if (delInput) delInput.checked = false;
+    clone.querySelector('.row-subtotal').textContent = '$0.00';
+    var sw = clone.querySelector('.stock-badge-wrap');
+    if (sw) sw.innerHTML = '';
+
+    tbody.appendChild(clone);
+    totalForms.value = idx + 1;
+
+    if (typeof window._initChoicesOnRow === 'function') {
+      window._initChoicesOnRow(clone);
+    }
+    recalcAll();
+  });
+
+  // Badges iniciales en modo edición
+  tbody.querySelectorAll('.detail-row:not(.deleted-row)').forEach(function (row) {
+    var pid = row.querySelector('.id-product').value;
+    var qty = parseInt(row.querySelector('.id-qty').value) || 0;
+    if (pid) updateStockBadge(row, pid, qty);
+  });
+  recalcAll();
+})();
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10/public/assets/scripts/choices.min.js"></script>
+<script>
+(function () {
+  var CHOICES_OPTS = {
+    searchEnabled:          true,
+    searchPlaceholderValue: 'Buscar…',
+    noResultsText:          'Sin resultados',
+    noChoicesText:          'Sin opciones disponibles',
+    itemSelectText:         '',
+    shouldSort:             false,
+  };
+
+  window._initChoicesOnRow = function (row) {
+    var sel = row.querySelector('.id-product');
+    if (!sel || sel._choicesInit) return;
+    sel._choicesInit = true;
+    new Choices(sel, CHOICES_OPTS);
+  };
+
+  document.querySelectorAll('#detail-tbody .detail-row').forEach(function (row) {
+    window._initChoicesOnRow(row);
+  });
+
+  var custSel = document.getElementById('id_customer');
+  var custChoices = null;
+  if (custSel) {
+    custChoices = new Choices(custSel, CHOICES_OPTS);
+  }
+
+  var btnSave = document.getElementById('btnSaveCustomer');
+  if (btnSave) {
+    btnSave.addEventListener('click', function () {
+      var errEl = document.getElementById('customerModalErrors');
+      errEl.classList.add('d-none');
+      var fd = new FormData();
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fd.append('dni',        document.getElementById('qcDni').value.trim());
+      fd.append('first_name', document.getElementById('qcFirstName').value.trim());
+      fd.append('last_name',  document.getElementById('qcLastName').value.trim());
+
+      fetch('{% url "billing:customer_quick_create" %}', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.errors) {
+            errEl.textContent = Object.values(data.errors).flat().join(' | ');
+            errEl.classList.remove('d-none');
+            return;
+          }
+          if (custChoices) {
+            custChoices.setChoices(
+              [{ value: String(data.id), label: data.text, selected: false }],
+              'value', 'label', false
+            );
+            custChoices.setChoiceByValue(String(data.id));
+          }
+          document.getElementById('qcDni').value       = '';
+          document.getElementById('qcFirstName').value = '';
+          document.getElementById('qcLastName').value  = '';
+          bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+        })
+        .catch(function () {
+          errEl.textContent = 'Error de conexión. Intente nuevamente.';
+          errEl.classList.remove('d-none');
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

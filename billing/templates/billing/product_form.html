@@ -1,0 +1,286 @@
+{% extends 'billing/base.html' %}
+{% block title %}{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Producto{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:product_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">
+    {% if form.instance.pk %}Editar Producto{% else %}Registrar Producto{% endif %}
+  </h2>
+  {% if form.instance.pk %}
+  <span class="badge bg-secondary fs-6 ms-1"># {{ form.instance.pk }}</span>
+  {% endif %}
+</div>
+
+{# ── Errores globales del formulario ────────────────────────────── #}
+{% if form.non_field_errors %}
+<div class="alert alert-danger rounded-3">
+  {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+
+    {# ── Cabecera ────────────────────────────────────────────────── #}
+    <div class="card-header border-0 py-3 inv-card-header">
+      <span class="text-white fw-bold fs-5">
+        &#128230; {% if form.instance.pk %}Editar{% else %}Registrar{% endif %} Producto
+      </span>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="row g-4 align-items-start">
+
+        {# ══ COLUMNA IZQUIERDA — Información del producto (7/12) ══ #}
+        <div class="col-md-7">
+
+          <h6 class="text-muted text-uppercase fw-semibold mb-4 dm-section-label">
+            &#128203; Información del Producto
+          </h6>
+
+          {# Nombre #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="{{ form.name.id_for_label }}">
+              {{ form.name.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.name }}
+            {% if form.name.help_text %}
+            <div class="form-text">{{ form.name.help_text }}</div>
+            {% endif %}
+            {% for err in form.name.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+            {% endfor %}
+          </div>
+
+          {# Marca + Grupo #}
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.brand.id_for_label }}">
+                {{ form.brand.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.brand }}
+              {% for err in form.brand.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.group.id_for_label }}">
+                {{ form.group.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.group }}
+              {% for err in form.group.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Precio + Tasa IVA + Stock #}
+          <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold" for="{{ form.unit_price.id_for_label }}">
+                {{ form.unit_price.label }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group has-validation">
+                <span class="input-group-text fw-semibold">$</span>
+                {{ form.unit_price }}
+                {% for err in form.unit_price.errors %}
+                <div class="invalid-feedback">{{ err }}</div>
+                {% endfor %}
+              </div>
+              {% if form.unit_price.help_text %}
+              <div class="form-text">{{ form.unit_price.help_text }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold" for="{{ form.tax_rate.id_for_label }}">
+                {{ form.tax_rate.label }}
+              </label>
+              {{ form.tax_rate }}
+              {% if form.tax_rate.help_text %}
+              <div class="form-text">{{ form.tax_rate.help_text }}</div>
+              {% endif %}
+              {% for err in form.tax_rate.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold" for="{{ form.stock.id_for_label }}">
+                {{ form.stock.label }}
+              </label>
+              <div class="input-group">
+                {{ form.stock }}
+                <span class="input-group-text text-muted">uds.</span>
+              </div>
+              {% if form.stock.help_text %}
+              <div class="form-text">{{ form.stock.help_text }}</div>
+              {% endif %}
+              {% for err in form.stock.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Proveedores #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="{{ form.suppliers.id_for_label }}">
+              {{ form.suppliers.label }}
+            </label>
+            {{ form.suppliers }}
+            {% if form.suppliers.help_text %}
+            <div class="form-text">{{ form.suppliers.help_text }}</div>
+            {% endif %}
+          </div>
+
+          {# Activo #}
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              {{ form.is_active }}
+              <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                {{ form.is_active.label }}
+              </label>
+            </div>
+            {% if form.is_active.help_text %}
+            <div class="form-text ms-4">{{ form.is_active.help_text }}</div>
+            {% endif %}
+          </div>
+
+          {# Descripción #}
+          <div class="mb-0">
+            <label class="form-label fw-semibold" for="{{ form.description.id_for_label }}">
+              {{ form.description.label }}
+            </label>
+            {{ form.description }}
+          </div>
+
+        </div>
+
+        {# ══ COLUMNA DERECHA — Imagen y Resumen (5/12) ══════════ #}
+        <div class="col-md-5">
+
+          <h6 class="text-muted text-uppercase fw-semibold mb-4 dm-section-label">
+            &#128247; Imagen y Resumen
+          </h6>
+
+          {# Zona de preview — clic para cambiar foto #}
+          <div id="pfImgWrapper"
+               class="pf-img-wrapper rounded-4 overflow-hidden bg-light
+                      d-flex align-items-center justify-content-center mb-3"
+               onclick="document.getElementById('{{ form.photo.auto_id }}').click()"
+               title="Clic para cambiar la foto"
+               role="button"
+               tabindex="0"
+               onkeydown="if(event.key==='Enter')this.click()">
+            <img id="pfImgPreview"
+                 class="pf-img-cover{% if not form.instance.photo %} d-none{% endif %}"
+                 src="{% if form.instance.photo %}{{ form.instance.photo.url }}{% endif %}"
+                 alt="Vista previa de la foto">
+            <div id="pfPlaceholder"
+                 class="text-center text-muted p-4{% if form.instance.photo %} d-none{% endif %}">
+              <div class="pf-ph-icon">&#128247;</div>
+              <p class="small mb-0 mt-2">Clic para seleccionar foto</p>
+            </div>
+          </div>
+
+          {# Input de archivo — oculto, activado por clic en la zona de preview #}
+          {{ form.photo }}
+          {% for err in form.photo.errors %}
+          <div class="text-danger small mb-1">{{ err }}</div>
+          {% endfor %}
+
+          {# Botón visual para cambiar foto #}
+          <button type="button"
+                  class="btn btn-outline-primary w-100 mb-4"
+                  onclick="document.getElementById('{{ form.photo.auto_id }}').click()">
+            &#128247;
+            {% if form.instance.photo %}Cambiar foto{% else %}Seleccionar foto{% endif %}
+          </button>
+
+          {# Tarjeta de balance dinámico — solo lectura #}
+          <div class="pf-balance rounded-3 p-4">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <small class="dm-label">Balance en Stock</small>
+                <div id="pfBalance" class="fw-bold fs-2 lh-1 mt-2 mb-3">$0.00</div>
+              </div>
+              <div class="pf-balance-icon">&#128181;</div>
+            </div>
+            <hr class="my-0 mb-3 border-primary border-opacity-25">
+            <div class="d-flex align-items-center gap-2 small text-muted flex-wrap">
+              <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-2 py-1"
+                    id="pfPriceShow">$0.00</span>
+              <span class="fw-bold">&times;</span>
+              <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-2 py-1"
+                    id="pfStockShow">0</span>
+              <span>unidades</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Pie del formulario ──────────────────────────────────────── #}
+    <div class="card-footer bg-light border-0 d-flex gap-2 justify-content-end py-3 px-4">
+      <a href="{% url 'billing:product_list' %}" class="btn btn-secondary">
+        Cancelar
+      </a>
+      <button type="submit" class="btn btn-primary px-4">
+        &#128190; {% if form.instance.pk %}Guardar cambios{% else %}Registrar Producto{% endif %}
+      </button>
+    </div>
+
+  </div>
+</form>
+
+<script>
+(function () {
+  var photoInput  = document.getElementById('{{ form.photo.auto_id }}');
+  var imgPreview  = document.getElementById('pfImgPreview');
+  var placeholder = document.getElementById('pfPlaceholder');
+  var priceInput  = document.getElementById('{{ form.unit_price.auto_id }}');
+  var stockInput  = document.getElementById('{{ form.stock.auto_id }}');
+  var balanceEl   = document.getElementById('pfBalance');
+  var priceShow   = document.getElementById('pfPriceShow');
+  var stockShow   = document.getElementById('pfStockShow');
+
+  /* ── Vista previa inmediata al seleccionar imagen ─────────── */
+  photoInput.addEventListener('change', function () {
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      imgPreview.src = e.target.result;
+      imgPreview.classList.remove('d-none');
+      placeholder.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* ── Balance = precio × stock, actualización en tiempo real ── */
+  function fmt(n, dec) {
+    return n.toLocaleString('es-EC', {
+      minimumFractionDigits: dec, maximumFractionDigits: dec
+    });
+  }
+
+  function updateBalance() {
+    var price   = parseFloat(priceInput.value) || 0;
+    var stock   = parseInt(stockInput.value, 10) || 0;
+    var balance = price * stock;
+
+    balanceEl.textContent   = '$' + fmt(balance, 2);
+    balanceEl.style.color   = balance > 0 ? '#0d6efd' : '#6c757d';
+    priceShow.textContent   = '$' + fmt(price, 2);
+    stockShow.textContent   = stock;
+  }
+
+  priceInput.addEventListener('input', updateBalance);
+  stockInput.addEventListener('input', updateBalance);
+  updateBalance();   /* inicializar con valores actuales (modo Editar) */
+})();
+</script>
+
+{% endblock %}

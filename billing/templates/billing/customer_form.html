@@ -1,0 +1,267 @@
+{% extends 'billing/base.html' %}
+{% block title %}{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Cliente{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cf-photo-zone   { position: relative; display: inline-block; cursor: pointer; }
+  .cf-photo-circle { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; }
+  .cf-photo-img    { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cf-camera-badge {
+    position: absolute; bottom: 2px; right: 2px;
+    background: rgba(0,0,0,.55); color: #fff;
+    border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; pointer-events: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:customer_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">
+    {% if form.instance.pk %}Editar Cliente{% else %}Registrar Cliente{% endif %}
+  </h2>
+  {% if form.instance.pk %}
+  <span class="badge bg-secondary fs-6 ms-1"># {{ form.instance.pk }}</span>
+  {% endif %}
+</div>
+
+{# ── Errores globales del formulario ────────────────────────────── #}
+{% if form.non_field_errors %}
+<div class="alert alert-danger rounded-3">
+  {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+
+    {# ── Cabecera ────────────────────────────────────────────────── #}
+    <div class="card-header border-0 py-3 inv-card-header">
+      <span class="text-white fw-bold fs-5">
+        &#128100; {% if form.instance.pk %}Editar{% else %}Registrar{% endif %} Cliente
+      </span>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="row g-4 align-items-start">
+
+        {# ══ COLUMNA IZQUIERDA — Información del cliente (7/12) ══ #}
+        <div class="col-md-7">
+
+          <h6 class="text-muted text-uppercase fw-semibold mb-4 dm-section-label">
+            &#128203; Información del Cliente
+          </h6>
+
+          {# DNI / RUC #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="{{ form.dni.id_for_label }}">
+              {{ form.dni.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.dni }}
+            {% if form.dni.help_text %}
+            <div class="form-text">{{ form.dni.help_text }}</div>
+            {% endif %}
+            {% for err in form.dni.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+            {% endfor %}
+          </div>
+
+          {# Nombres + Apellidos #}
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.first_name.id_for_label }}">
+                {{ form.first_name.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.first_name }}
+              {% for err in form.first_name.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.last_name.id_for_label }}">
+                {{ form.last_name.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.last_name }}
+              {% for err in form.last_name.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Email + Teléfono #}
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.email.id_for_label }}">
+                {{ form.email.label }}
+              </label>
+              {{ form.email }}
+              {% for err in form.email.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" for="{{ form.phone.id_for_label }}">
+                {{ form.phone.label }}
+              </label>
+              {{ form.phone }}
+              {% for err in form.phone.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Activo #}
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              {{ form.is_active }}
+              <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                {{ form.is_active.label }}
+              </label>
+            </div>
+            {% if form.is_active.help_text %}
+            <div class="form-text ms-4">{{ form.is_active.help_text }}</div>
+            {% endif %}
+          </div>
+
+          {# Dirección #}
+          <div class="mb-0">
+            <label class="form-label fw-semibold" for="{{ form.address.id_for_label }}">
+              {{ form.address.label }}
+            </label>
+            {{ form.address }}
+          </div>
+
+        </div>
+
+        {# ══ COLUMNA DERECHA — Tarjeta de vista previa (5/12) ══ #}
+        <div class="col-md-5">
+
+          <h6 class="text-muted text-uppercase fw-semibold mb-4 dm-section-label">
+            &#128196; Vista Previa
+          </h6>
+
+          {# Foto + Avatar dinámico #}
+          <div class="text-center mb-4">
+            <div class="cf-photo-zone mx-auto mb-1" id="cfPhotoZone" title="Clic para cambiar la foto">
+              <div id="cfAvatar" class="dm-avatar cf-avatar cf-photo-circle">
+                <img id="cfPhotoPreview" alt=""
+                     src="{% if form.instance.photo %}{{ form.instance.photo_url }}{% else %}/media/customer/customer%20generico.png{% endif %}"
+                     class="cf-photo-img {% if not form.instance.photo %}d-none{% endif %}">
+                <span id="cfInitials" class="{% if form.instance.photo %}d-none{% endif %}">?</span>
+              </div>
+              <span class="cf-camera-badge">&#128247;</span>
+            </div>
+            {{ form.photo }}
+            <small class="text-muted d-block mb-2">Clic para cambiar la foto</small>
+            <div id="cfFullName" class="fw-bold fs-5 text-dark">—</div>
+            <div id="cfDni" class="text-muted small">—</div>
+          </div>
+
+          <hr class="mb-3">
+
+          {# Campos de contacto en tiempo real #}
+          <div class="d-flex flex-column gap-2">
+            <div class="dm-field">
+              <small class="dm-label">Correo Electrónico</small>
+              <div id="cfEmail" class="dm-value">—</div>
+            </div>
+            <div class="dm-field">
+              <small class="dm-label">Teléfono</small>
+              <div id="cfPhone" class="dm-value">—</div>
+            </div>
+            <div class="dm-field">
+              <small class="dm-label">Dirección</small>
+              <div id="cfAddress" class="dm-value">—</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Pie del formulario ──────────────────────────────────────── #}
+    <div class="card-footer bg-light border-0 d-flex gap-2 justify-content-end py-3 px-4">
+      <a href="{% url 'billing:customer_list' %}" class="btn btn-secondary">
+        Cancelar
+      </a>
+      <button type="submit" class="btn btn-primary px-4">
+        &#128190; {% if form.instance.pk %}Guardar cambios{% else %}Registrar Cliente{% endif %}
+      </button>
+    </div>
+
+  </div>
+</form>
+
+<script>
+(function () {
+  var fFirst   = document.getElementById('{{ form.first_name.auto_id }}');
+  var fLast    = document.getElementById('{{ form.last_name.auto_id }}');
+  var fDni     = document.getElementById('{{ form.dni.auto_id }}');
+  var fEmail   = document.getElementById('{{ form.email.auto_id }}');
+  var fPhone   = document.getElementById('{{ form.phone.auto_id }}');
+  var fAddress = document.getElementById('{{ form.address.auto_id }}');
+  var fPhoto   = document.getElementById('{{ form.photo.auto_id }}');
+
+  var elPreview  = document.getElementById('cfPhotoPreview');
+  var elInitials = document.getElementById('cfInitials');
+  var elFullName = document.getElementById('cfFullName');
+  var elDni      = document.getElementById('cfDni');
+  var elEmail    = document.getElementById('cfEmail');
+  var elPhone    = document.getElementById('cfPhone');
+  var elAddress  = document.getElementById('cfAddress');
+
+  function initials(first, last) {
+    var a = (first || '').trim()[0] || '';
+    var b = (last  || '').trim()[0] || '';
+    return (a + b).toUpperCase() || '?';
+  }
+
+  function update() {
+    var first    = fFirst.value.trim();
+    var last     = fLast.value.trim();
+    var fullName = [first, last].filter(Boolean).join(' ') || '—';
+
+    if (elInitials && !elInitials.classList.contains('d-none')) {
+      elInitials.textContent = initials(first, last);
+    }
+    elFullName.textContent = fullName;
+    elDni.textContent      = fDni.value.trim()     || '—';
+    elEmail.textContent    = fEmail.value.trim()   || '—';
+    elPhone.textContent    = fPhone.value.trim()   || '—';
+    elAddress.textContent  = fAddress.value.trim() || '—';
+  }
+
+  // Clic en la zona de foto abre el file input
+  document.getElementById('cfPhotoZone').addEventListener('click', function () {
+    if (fPhoto) fPhoto.click();
+  });
+
+  // Preview al seleccionar imagen
+  if (fPhoto) {
+    fPhoto.addEventListener('change', function () {
+      if (this.files && this.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          elPreview.src = e.target.result;
+          elPreview.classList.remove('d-none');
+          if (elInitials) elInitials.classList.add('d-none');
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+  }
+
+  [fFirst, fLast, fDni, fEmail, fPhone, fAddress].forEach(function (el) {
+    el.addEventListener('input', update);
+  });
+
+  update();   /* inicializar con valores actuales (modo Editar) */
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10/public/assets/styles/choices.min.css">
+<style>
+  [data-bs-theme="dark"] .choices__inner,
+  [data-bs-theme="dark"] .choices__input {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+  }
+  [data-bs-theme="dark"] .choices__list--dropdown,
+  [data-bs-theme="dark"] .choices__list[aria-expanded] {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+  }
+  [data-bs-theme="dark"] .choices__item { color: var(--bs-body-color); }
+  [data-bs-theme="dark"] .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  [data-bs-theme="dark"] .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background-color: #6f42c1; color: #fff;
+  }
+  .pur-card-header   { background: linear-gradient(135deg,#6f42c1 0%,#4a2a8a 100%); }
+  .stock-badge-wrap  { min-height: 1.2rem; }
+  .pur-col-qty       { width: 120px; }
+  .pur-col-cost      { width: 150px; }
+  .pur-col-sub       { width: 130px; }
+  .pur-col-del       { width: 70px; }
+  .pur-totals-box    { min-width: 220px; }
+  .pur-clear         { clear: both; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">{{ title }}</h2>
+</div>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger rounded-3">
+  {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {# ── Datos de la compra ── #}
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header border-0 py-3 pur-card-header">
+      <span class="text-white fw-bold fs-5">&#128230; Datos de la Compra</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" for="{{ form.supplier.id_for_label }}">
+            {{ form.supplier.label }} <span class="text-danger">*</span>
+          </label>
+          <div class="d-flex gap-2 align-items-start">
+            <div class="flex-grow-1">{{ form.supplier }}</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-1"
+                    data-bs-toggle="modal" data-bs-target="#supplierModal"
+                    title="Registrar proveedor rápido">+ Nuevo</button>
+          </div>
+          {% for err in form.supplier.errors %}
+          <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" for="{{ form.document_number.id_for_label }}">
+            {{ form.document_number.label }} <span class="text-danger">*</span>
+          </label>
+          {{ form.document_number }}
+          {% for err in form.document_number.errors %}
+          <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Detalle de productos ── #}
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header border-0 py-3 bg-light d-flex align-items-center justify-content-between">
+      <span class="fw-bold">&#128203; Detalle de Productos</span>
+      <button type="button" class="btn btn-sm btn-success" id="add-row">+ Agregar Fila</button>
+    </div>
+
+    {{ formset.management_form }}
+
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0" id="detail-table">
+        <thead class="table-secondary">
+          <tr>
+            <th>Producto</th>
+            <th class="text-center pur-col-qty">Cantidad</th>
+            <th class="text-center pur-col-cost">Costo Unit.</th>
+            <th class="text-end pur-col-sub">Subtotal</th>
+            <th class="text-center pur-col-del">Quitar</th>
+          </tr>
+        </thead>
+        <tbody id="formset-body">
+          {% for detail_form in formset %}
+          <tr class="detail-row">
+            <td>
+              {{ detail_form.product }}
+              {{ detail_form.id }}
+              <div class="stock-badge-wrap mt-1"></div>
+              {% for e in detail_form.product.errors %}
+              <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </td>
+            <td>
+              {{ detail_form.quantity }}
+              {% for e in detail_form.quantity.errors %}
+              <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </td>
+            <td>
+              {{ detail_form.unit_cost }}
+              {% for e in detail_form.unit_cost.errors %}
+              <div class="text-danger small">{{ e }}</div>
+              {% endfor %}
+            </td>
+            <td class="text-end fw-semibold align-middle line-sub">$0.00</td>
+            <td class="text-center align-middle">
+              {% if detail_form.instance.pk %}
+                <div class="form-check justify-content-center d-flex">
+                  {{ detail_form.DELETE }}
+                </div>
+              {% else %}
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">&#10005;</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Resumen de totales #}
+    <div class="card-footer bg-light border-0 py-3 px-4">
+      <div class="float-end text-end pur-totals-box">
+        <div class="d-flex justify-content-between mb-1">
+          <small class="text-muted">Subtotal:</small>
+          <span id="summary-sub" class="fw-semibold">$0.00</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+          <small class="text-muted">IVA:</small>
+          <span id="summary-tax" class="fw-semibold">$0.00</span>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between">
+          <span class="fw-bold">TOTAL:</span>
+          <span id="summary-total" class="fw-bold text-primary fs-5">$0.00</span>
+        </div>
+      </div>
+      <div class="pur-clear"></div>
+    </div>
+  </div>
+
+  {# ── Botones ── #}
+  <div class="d-flex gap-2 justify-content-end">
+    <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-primary px-4">
+      &#128190; {% if purchase %}Actualizar Borrador{% else %}Guardar Borrador{% endif %}
+    </button>
+  </div>
+
+</form>
+
+<!-- ── Modal nuevo proveedor ──────────────────────────────────────── -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header border-0 py-3 pur-card-header">
+        <h5 class="modal-title text-white fw-bold">Nuevo Proveedor</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="supplierModalErrors" class="alert alert-danger d-none py-2"></div>
+        <div class="mb-0">
+          <label class="form-label fw-semibold" for="qsName">Nombre de la empresa <span class="text-danger">*</span></label>
+          <input type="text" id="qsName" class="form-control" placeholder="Ej. Distribuidora XYZ S.A.">
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveSupplier">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var PRODUCT_DATA = {{ product_data_json|safe }};
+  var TOTAL_FORMS  = document.getElementById('id_details-TOTAL_FORMS');
+  var body         = document.getElementById('formset-body');
+
+  // Capturar template ANTES de que Choices.js transforme el DOM
+  var _firstRow = body.querySelector('.detail-row');
+  window._PUR_ROW_TEMPLATE = _firstRow ? _firstRow.cloneNode(true).outerHTML : '';
+
+  function parseNum(v) { var n = parseFloat(v); return isNaN(n) || n < 0 ? 0 : n; }
+  function fmt(n) { return '$' + n.toFixed(2); }
+
+  function badgeClass(qty, stock) {
+    if (qty > stock)   return 'bg-danger';
+    if (qty === stock) return 'bg-warning text-dark';
+    return 'bg-success';
+  }
+
+  function updateStockBadge(row, pid, qty) {
+    var wrap = row.querySelector('.stock-badge-wrap');
+    if (!wrap) return;
+    if (!pid || !PRODUCT_DATA[pid]) { wrap.innerHTML = ''; return; }
+    var s   = parseInt(PRODUCT_DATA[pid].stock);
+    var cls = badgeClass(qty, s);
+    wrap.innerHTML = '<span class="badge ' + cls + ' ms-1">Stock actual: ' + s + '</span>';
+  }
+
+  function recalcRow(row) {
+    var pid     = row.querySelector('.pd-product') ? row.querySelector('.pd-product').value : '';
+    var qty     = parseNum(row.querySelector('.pd-qty')  ? row.querySelector('.pd-qty').value  : 0);
+    var cost    = parseNum(row.querySelector('.pd-cost') ? row.querySelector('.pd-cost').value : 0);
+    var taxRate = (pid && PRODUCT_DATA[pid]) ? parseFloat(PRODUCT_DATA[pid].tax_rate) : 0.15;
+    var sub     = qty * cost;
+    var cell    = row.querySelector('.line-sub');
+    if (cell) cell.textContent = fmt(sub);
+    return { sub: sub, tax: sub * taxRate };
+  }
+
+  function recalcAll() {
+    var totSub = 0, totTax = 0;
+    body.querySelectorAll('.detail-row').forEach(function (row) {
+      var r = recalcRow(row);
+      totSub += r.sub;
+      totTax += r.tax;
+    });
+    document.getElementById('summary-sub').textContent   = fmt(totSub);
+    document.getElementById('summary-tax').textContent   = fmt(totTax);
+    document.getElementById('summary-total').textContent = fmt(totSub + totTax);
+  }
+
+  body.addEventListener('change', function (e) {
+    if (e.target.classList.contains('pd-product')) {
+      var row = e.target.closest('.detail-row');
+      var pid = e.target.value;
+      var qty = parseInt(row.querySelector('.pd-qty') ? row.querySelector('.pd-qty').value : 0) || 0;
+      updateStockBadge(row, pid, qty);
+      recalcAll();
+    }
+  });
+
+  body.addEventListener('input', function (e) {
+    if (e.target.classList.contains('pd-qty')) {
+      var row = e.target.closest('.detail-row');
+      var pid = row.querySelector('.pd-product') ? row.querySelector('.pd-product').value : '';
+      updateStockBadge(row, pid, parseInt(e.target.value) || 0);
+    }
+    if (e.target.classList.contains('pd-qty') ||
+        e.target.classList.contains('pd-cost') ||
+        e.target.classList.contains('pd-product')) {
+      recalcAll();
+    }
+  });
+
+  document.getElementById('add-row').addEventListener('click', function () {
+    var idx  = parseInt(TOTAL_FORMS.value);
+    var temp = document.createElement('tbody');
+    temp.innerHTML = window._PUR_ROW_TEMPLATE
+      .replace(/details-\d+-/g, 'details-' + idx + '-');
+    var newRow = temp.querySelector('.detail-row');
+    if (!newRow) return;
+
+    newRow.querySelectorAll('input:not([type=hidden])').forEach(function (el) { el.value = ''; });
+    newRow.querySelectorAll('select').forEach(function (el) { el.selectedIndex = 0; });
+    var sub = newRow.querySelector('.line-sub');
+    if (sub) sub.textContent = '$0.00';
+    var sw = newRow.querySelector('.stock-badge-wrap');
+    if (sw) sw.innerHTML = '';
+
+    // Siempre usar botón de quitar para filas añadidas por JS
+    var lastCell = newRow.cells[newRow.cells.length - 1];
+    lastCell.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">&#10005;</button>';
+
+    body.appendChild(newRow);
+    TOTAL_FORMS.value = idx + 1;
+
+    if (typeof window._initChoicesOnRow === 'function') {
+      window._initChoicesOnRow(newRow);
+    }
+    recalcAll();
+  });
+
+  body.addEventListener('click', function (e) {
+    if (e.target.classList.contains('btn-remove-row')) {
+      if (body.querySelectorAll('.detail-row').length > 1) {
+        e.target.closest('tr').remove();
+        TOTAL_FORMS.value = parseInt(TOTAL_FORMS.value) - 1;
+        recalcAll();
+      }
+    }
+  });
+
+  // Badges iniciales en modo edición
+  body.querySelectorAll('.detail-row').forEach(function (row) {
+    var sel = row.querySelector('.pd-product');
+    if (sel && sel.value) {
+      var qty = parseInt(row.querySelector('.pd-qty') ? row.querySelector('.pd-qty').value : 0) || 0;
+      updateStockBadge(row, sel.value, qty);
+    }
+  });
+  recalcAll();
+})();
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10/public/assets/scripts/choices.min.js"></script>
+<script>
+(function () {
+  var CHOICES_OPTS = {
+    searchEnabled:          true,
+    searchPlaceholderValue: 'Buscar…',
+    noResultsText:          'Sin resultados',
+    noChoicesText:          'Sin opciones disponibles',
+    itemSelectText:         '',
+    shouldSort:             false,
+  };
+
+  window._initChoicesOnRow = function (row) {
+    var sel = row.querySelector('.pd-product');
+    if (!sel || sel._choicesInit) return;
+    sel._choicesInit = true;
+    new Choices(sel, CHOICES_OPTS);
+  };
+
+  document.querySelectorAll('#formset-body .detail-row').forEach(function (row) {
+    window._initChoicesOnRow(row);
+  });
+
+  var supplierSel = document.getElementById('id_supplier');
+  var supplierChoices = null;
+  if (supplierSel) {
+    supplierChoices = new Choices(supplierSel, CHOICES_OPTS);
+  }
+
+  var btnSave = document.getElementById('btnSaveSupplier');
+  if (btnSave) {
+    btnSave.addEventListener('click', function () {
+      var errEl = document.getElementById('supplierModalErrors');
+      errEl.classList.add('d-none');
+      var fd = new FormData();
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fd.append('name', document.getElementById('qsName').value.trim());
+
+      fetch('{% url "billing:supplier_quick_create" %}', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.errors) {
+            errEl.textContent = Object.values(data.errors).flat().join(' | ');
+            errEl.classList.remove('d-none');
+            return;
+          }
+          if (supplierChoices) {
+            supplierChoices.setChoices(
+              [{ value: String(data.id), label: data.text, selected: false }],
+              'value', 'label', false
+            );
+            supplierChoices.setChoiceByValue(String(data.id));
+          }
+          document.getElementById('qsName').value = '';
+          bootstrap.Modal.getInstance(document.getElementById('supplierModal')).hide();
+        })
+        .catch(function () {
+          errEl.textContent = 'Error de conexión. Intente nuevamente.';
+          errEl.classList.remove('d-none');
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

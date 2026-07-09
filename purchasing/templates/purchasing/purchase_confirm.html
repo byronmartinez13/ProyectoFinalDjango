@@ -1,0 +1,102 @@
+{% extends 'billing/base.html' %}
+{% block title %}Confirmar Compra #{{ purchase.id }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'purchasing:purchase_detail' purchase.pk %}"
+     class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">Confirmar Compra #{{ purchase.id }}</h2>
+</div>
+
+<div class="alert alert-info d-flex gap-2 align-items-start mb-4">
+  <span style="font-size:1.4rem">&#9432;</span>
+  <div>
+    Al confirmar esta compra se <strong>incrementará el stock</strong> de los productos listados
+    y se registrará el movimiento de inventario. Esta acción no se puede deshacer
+    directamente; deberás anular la compra si necesitas revertirlo.
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-success text-white py-3">
+    <span class="fw-bold">&#128230; Productos que ingresarán al stock</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Producto</th>
+            <th class="text-center">Cantidad</th>
+            <th class="text-end">Costo Unit.</th>
+            <th class="text-end">Subtotal</th>
+            <th class="text-center">Stock actual</th>
+            <th class="text-center">Stock tras confirmar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for det in purchase.details.all %}
+          <tr>
+            <td>{{ det.product.name }}</td>
+            <td class="text-center fw-bold text-success">+{{ det.quantity }}</td>
+            <td class="text-end">${{ det.unit_cost }}</td>
+            <td class="text-end">${{ det.subtotal }}</td>
+            <td class="text-center">
+              <span class="badge bg-secondary">{{ det.product.stock }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-success">{{ det.product.stock|add:det.quantity }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="3" class="text-end fw-semibold">Subtotal:</td>
+            <td class="text-end">${{ purchase.subtotal }}</td>
+            <td colspan="2"></td>
+          </tr>
+          <tr>
+            <td colspan="3" class="text-end fw-semibold">IVA:</td>
+            <td class="text-end">${{ purchase.tax }}</td>
+            <td colspan="2"></td>
+          </tr>
+          <tr class="table-success">
+            <td colspan="3" class="text-end fw-bold fs-6">TOTAL:</td>
+            <td class="text-end fw-bold fs-6">${{ purchase.total }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="mb-3">
+    <label class="form-label fw-semibold d-block">Forma de pago</label>
+    <div class="btn-group" role="group" aria-label="Forma de pago">
+      <input type="radio" class="btn-check" name="tipo_pago" id="tp-contado" value="contado" autocomplete="off" required>
+      <label class="btn btn-outline-primary" for="tp-contado">&#128181; Contado</label>
+
+      <input type="radio" class="btn-check" name="tipo_pago" id="tp-credito" value="credito" autocomplete="off" required>
+      <label class="btn btn-outline-primary" for="tp-credito">&#128179; Crédito</label>
+    </div>
+    <div class="form-text">
+      Contado: la compra queda pagada de inmediato. Crédito: queda con saldo pendiente,
+      registrable luego desde el módulo de Pagos a Proveedores.
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-success">
+      &#9989; Confirmar y actualizar stock
+    </button>
+    <a href="{% url 'purchasing:purchase_detail' purchase.pk %}"
+       class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}

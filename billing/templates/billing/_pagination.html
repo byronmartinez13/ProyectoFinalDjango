@@ -1,0 +1,39 @@
+{% if is_paginated %}
+<p class="text-muted small mb-1">{{ paginator.count }} registro(s) &mdash; página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</p>
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center mb-0"
+      data-current="{{ page_obj.number }}"
+      data-total="{{ page_obj.paginator.num_pages }}"
+      data-url="?{% for k,v in search_params.items %}{% if k != 'page' and k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page=">
+    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+      <a class="page-link" href="?{% for k,v in search_params.items %}{% if k != 'page' and k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page=1">&laquo;</a>
+    </li>
+    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+      <a class="page-link" href="?{% for k,v in search_params.items %}{% if k != 'page' and k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">&#8249;</a>
+    </li>
+    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+      <a class="page-link" href="?{% for k,v in search_params.items %}{% if k != 'page' and k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}">&#8250;</a>
+    </li>
+    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+      <a class="page-link" href="?{% for k,v in search_params.items %}{% if k != 'page' and k != 'export' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+    </li>
+    <script>
+      (function () {
+        var ul   = document.currentScript.parentElement;
+        var cur  = parseInt(ul.dataset.current, 10);
+        var tot  = parseInt(ul.dataset.total,   10);
+        var base = ul.dataset.url;
+        var nextLi = ul.children[2]; /* 0=First 1=Prev 2=Next 3=Last */
+        for (var i = Math.max(1, cur - 2); i <= Math.min(tot, cur + 2); i++) {
+          var li = document.createElement('li');
+          li.className = 'page-item' + (i === cur ? ' active' : '');
+          li.innerHTML = i === cur
+            ? '<span class="page-link">' + i + '</span>'
+            : '<a class="page-link" href="' + base + i + '">' + i + '</a>';
+          ul.insertBefore(li, nextLi);
+        }
+      })();
+    </script>
+  </ul>
+</nav>
+{% endif %}

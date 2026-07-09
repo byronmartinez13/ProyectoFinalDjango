@@ -1,0 +1,311 @@
+{% load security_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Ventas{% endblock %}</title>
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  {% block extra_css %}{% endblock %}
+  <style>
+    /* ── Detail Modal ───────────────────────────────────────── */
+    .dm-avatar {
+      width: 110px; height: 110px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 2.2rem; font-weight: 800; color: #fff;
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+      letter-spacing: -1px; -webkit-user-select: none; user-select: none;
+    }
+    .dm-field {
+      background: var(--bs-tertiary-bg);
+      border-radius: 10px;
+      padding: 10px 14px;
+      border-left: 3px solid var(--bs-border-color);
+      height: 100%;
+      transition: border-color .2s;
+    }
+    .dm-field:hover { border-left-color: #0d6efd; }
+    .dm-label {
+      font-size: .68rem; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--bs-secondary-color);
+      display: block; margin-bottom: 3px;
+    }
+    .dm-value { font-size: .92rem; font-weight: 600; color: var(--bs-body-color); word-break: break-word; }
+    .dm-divider { border-right: 1px solid var(--bs-border-color); }
+    @media (max-width: 767px) { .dm-divider { border-right: none; border-bottom: 1px solid var(--bs-border-color); padding-bottom: 1rem; } }
+    .dm-section-label { letter-spacing: .06em; font-size: .75rem; }
+    .inv-card-header { background: linear-gradient(135deg,#0d6efd 0%,#0943a8 100%); }
+    .inv-avatar { background: linear-gradient(135deg,#0d6efd,#0943a8); font-size: 1.5rem; }
+    .cf-avatar { background: linear-gradient(135deg,#198754,#0f5132); font-size: 2rem; }
+    .btn-nav-link { text-decoration: none; }
+    /* Product Form */
+    .pf-img-wrapper {
+      height: 260px;
+      border: 2px dashed var(--bs-border-color);
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .pf-img-wrapper:hover {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 4px rgba(13,110,253,.1);
+    }
+    .pf-img-cover { object-fit: cover; width: 100%; height: 100%; }
+    .pf-ph-icon { font-size: 3.5rem; line-height: 1; }
+    .pf-balance { background: linear-gradient(135deg, #e0f2fe, #bfdbfe); }
+    /* Thumbnails en tablas de listado */
+    .tbl-thumb-col  { width: 48px; }
+    .tbl-thumb-cell { width: 48px; padding: 4px 6px !important; }
+    .tbl-thumb-img  { width: 36px; height: 36px; object-fit: cover; }
+    .pf-balance-icon { font-size: 2rem; opacity: .2; line-height: 1; }
+    .nav-brand-accent { color: #60a5fa; }
+    /* Theme toggle */
+    .theme-toggle-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 1.1rem; line-height: 1; padding: .375rem .5rem;
+      border-radius: .375rem; transition: background .2s;
+      color: rgba(255,255,255,.75);
+    }
+    .theme-toggle-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+    /* Tarjetas de selección de rol (login) */
+    .role-card {
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      border: 1px solid var(--bs-border-color);
+    }
+    .role-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.15) !important;
+      border-color: #0d6efd;
+    }
+    .role-card-icon { font-size: 2.5rem; line-height: 1; }
+  </style>
+</head>
+<body>
+<!-- Barra de navegación -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{% url 'billing:home' %}">Tecno<span class="nav-brand-accent">Stock</span></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+            aria-controls="nav" aria-expanded="false" aria-label="Abrir menú">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav me-auto">
+        {% if user.is_authenticated %}
+        {% if user|has_group:'Cliente' %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'store:catalog' %}">Tienda</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'store:cart' %}">&#128722; Carrito</a></li>
+        {% endif %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Ventas</a>
+          <ul class="dropdown-menu">
+            {% if user|has_group:'Analista de Compras' or user|has_group:'Administrador' or not user|has_any_group %}
+            <li><h6 class="dropdown-header">Catálogos</h6></li>
+            <li><a class="dropdown-item" href="{% url 'billing:brand_list' %}">Marcas</a></li>
+            <li><a class="dropdown-item" href="{% url 'billing:productgroup_list' %}">Grupos</a></li>
+            <li><a class="dropdown-item" href="{% url 'billing:supplier_list' %}">Proveedores</a></li>
+            <li><a class="dropdown-item" href="{% url 'billing:product_list' %}">Productos</a></li>
+            <li><hr class="dropdown-divider"></li>
+            {% elif user|has_group:'Vendedor' %}
+            <li><h6 class="dropdown-header">Catálogos</h6></li>
+            <li><a class="dropdown-item" href="{% url 'billing:product_list' %}">Productos</a></li>
+            <li><hr class="dropdown-divider"></li>
+            {% endif %}
+            {% if user|has_group:'Vendedor' or user|has_group:'Administrador' or not user|has_any_group %}
+            <li><h6 class="dropdown-header">Operaciones</h6></li>
+            <li><a class="dropdown-item" href="{% url 'billing:customer_list' %}">Clientes</a></li>
+            <li><a class="dropdown-item" href="{% url 'billing:invoice_list' %}">Facturas</a></li>
+            <li><a class="dropdown-item" href="{% url 'creditoventa:factura_list' %}">Cobros</a></li>
+            {% endif %}
+          </ul>
+        </li>
+        {% if user|has_group:'Analista de Compras' or user|has_group:'Administrador' or not user|has_any_group %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Compras</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'purchasing:purchase_list' %}">Compras</a></li>
+            <li><a class="dropdown-item" href="{% url 'pagos:compra_list' %}">Pagos a Proveedores</a></li>
+          </ul>
+        </li>
+        {% endif %}
+        {% if user|has_group:'Administrador' %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Seguridad</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'billing:signup' %}">+ Nuevo Usuario</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{% url 'security:user_list' %}">Usuarios</a></li>
+            <li><a class="dropdown-item" href="{% url 'security:group_list' %}">Roles</a></li>
+            <li><a class="dropdown-item" href="{% url 'security:permission_list' %}">Permisos</a></li>
+          </ul>
+        </li>
+        {% endif %}
+        {% endif %}
+      </ul>
+      <ul class="navbar-nav align-items-center">
+        <li class="nav-item"><button type="button" class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Cambiar tema claro / oscuro"><span id="theme-icon">&#127769;</span></button></li>
+        <li class="nav-item">{% if user.is_authenticated %}<a class="nav-link text-light" href="{% url 'billing:dashboard' %}">{{ user.username }}</a>{% endif %}</li>
+        <li class="nav-item">{% if user.is_authenticated %}<a class="nav-link" href="{% url 'password_change' %}" title="Cambiar contraseña">&#128273; Contraseña</a>{% endif %}</li>
+        <li class="nav-item">{% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}" class="d-inline">{% csrf_token %}<button type="submit" class="nav-link btn btn-link text-light btn-nav-link">Cerrar Sesión</button></form>{% else %}<a class="nav-link" href="{% url 'login' %}">Iniciar Sesión</a>{% endif %}</li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<!-- Contenido principal -->
+<div class="container mt-4">
+  {% if messages %}
+    {% for m in messages %}
+    <div class="alert alert-{{ m.tags }} alert-dismissible fade show">
+      {{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% block content %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ═══ MODAL DE DETALLE GENÉRICO ════════════════════════════════════════ -->
+<div class="modal fade" id="dmModal" tabindex="-1"
+     aria-labelledby="dmModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header border-0 py-3" id="dmHeader">
+        <h5 class="modal-title text-white fw-bold mb-0" id="dmModalTitle">Detalle</h5>
+        <button type="button" class="btn-close btn-close-white"
+                data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-0">
+          <div class="col-md-4 dm-divider pe-md-4 pb-4 pb-md-0 text-center" id="dmLeft"></div>
+          <div class="col-md-8 ps-md-4 pt-2" id="dmRight"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 gap-2">
+        <a href="#" class="btn btn-warning d-none" id="dmEditLink">&#9998; Editar</a>
+        <a href="#" class="btn btn-primary d-none" id="dmDetailLink">&#128196; Ver detalle completo</a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Modo claro / oscuro ─────────────────────────────────── */
+(function () {
+  var icon = document.getElementById('theme-icon');
+  var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+  if (icon) icon.textContent = current === 'dark' ? '☀️' : '🌙';
+})();
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-bs-theme', next);
+  localStorage.setItem('theme', next);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+/* ── Modal de detalle genérico ───────────────────────────── */
+(function () {
+  var _bsModal = null;
+  function bsModal() {
+    if (!_bsModal) _bsModal = new bootstrap.Modal(document.getElementById('dmModal'));
+    return _bsModal;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function adj(hex, amt) {
+    if (!hex || hex[0] !== '#') return '#343a40';
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.min(255, Math.max(0, (n >> 16) + amt));
+    var g = Math.min(255, Math.max(0, ((n >> 8) & 0xFF) + amt));
+    var b = Math.min(255, Math.max(0, (n & 0xFF) + amt));
+    return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  }
+
+  window.showDetail = function (btn) {
+    var d = btn.dataset;
+    var color = d.dmColor || '#343a40';
+    var isActive = d.dmActive === 'True';
+
+    document.getElementById('dmHeader').style.background =
+      'linear-gradient(135deg,' + color + ' 0%,' + adj(color, -40) + ' 100%)';
+    document.getElementById('dmModalTitle').textContent = d.dmTitle || 'Detalle';
+
+    var photoUrl = d.dmPhoto;
+    var leftHtml;
+    if (photoUrl) {
+      leftHtml =
+        '<div class="mt-2 mb-1 mx-auto" style="width:110px;height:110px;">' +
+          '<img src="' + esc(photoUrl) + '" alt="" ' +
+               'class="rounded-circle shadow" ' +
+               'style="width:110px;height:110px;object-fit:cover;">' +
+        '</div>';
+    } else {
+      leftHtml =
+        '<div class="dm-avatar mt-2" style="background:linear-gradient(135deg,' + color + ',' + adj(color, -50) + ')">' +
+          esc(d.dmInitial || '?') +
+        '</div>';
+    }
+    if (d.dmActive !== undefined) {
+      leftHtml += '<div class="my-3">' + (isActive
+        ? '<span class="badge rounded-pill bg-success px-3 py-2">&#10003;&nbsp;Activo</span>'
+        : '<span class="badge rounded-pill bg-secondary px-3 py-2">&#10007;&nbsp;Inactivo</span>') + '</div>';
+    }
+    if (d.dmSubtitle) {
+      leftHtml += '<p class="text-muted small mb-0 fw-semibold text-uppercase">' + esc(d.dmSubtitle) + '</p>';
+    }
+    document.getElementById('dmLeft').innerHTML = leftHtml;
+
+    var html = '<div class="row g-2">';
+    var i = 1;
+    while (d['dmF' + i + 'l']) {
+      var lbl = d['dmF' + i + 'l'];
+      var val = d['dmF' + i + 'v'] || '—';
+      var wide = d['dmF' + i + 'w'] === '1';
+      html += '<div class="' + (wide ? 'col-12' : 'col-sm-6') + '">' +
+                '<div class="dm-field">' +
+                  '<small class="dm-label">' + esc(lbl) + '</small>' +
+                  '<div class="dm-value">' + esc(val) + '</div>' +
+                '</div>' +
+              '</div>';
+      i++;
+    }
+    html += '</div>';
+    document.getElementById('dmRight').innerHTML = html;
+
+    var editLink = document.getElementById('dmEditLink');
+    if (d.dmEditUrl) {
+      editLink.href = d.dmEditUrl;
+      editLink.classList.remove('d-none');
+    } else {
+      editLink.classList.add('d-none');
+    }
+
+    var link = document.getElementById('dmDetailLink');
+    if (d.dmUrl) {
+      link.href = d.dmUrl;
+      link.classList.remove('d-none');
+    } else {
+      link.classList.add('d-none');
+    }
+
+    bsModal().show();
+  };
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

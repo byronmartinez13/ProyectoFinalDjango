@@ -1,0 +1,79 @@
+{% extends 'billing/base.html' %}
+{% block title %}Permisos{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h2 class="mb-0">Permisos por Rol</h2>
+  <a href="{% url 'security:permission_create' %}" class="btn btn-outline-secondary btn-sm">+ Nuevo Permiso</a>
+</div>
+<p class="text-muted small">
+  Marca o desmarca los permisos de cada rol y pulsa "Guardar cambios". El checkbox del
+  encabezado marca o desmarca todos los permisos de esa columna de una sola vez.
+</p>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-sm align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Permiso</th>
+          <th>Código</th>
+          {% for role in roles %}
+          <th class="text-center">
+            <div>{{ role.name }}</div>
+            <input type="checkbox" class="form-check-input role-select-all mt-1"
+                   data-role="{{ role.pk }}" title="Marcar/Desmarcar todos los permisos de {{ role.name }}">
+          </th>
+          {% endfor %}
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in items %}
+        {% ifchanged p.content_type_id %}
+        <tr class="table-light">
+          <td colspan="{{ roles|length|add:3 }}" class="fw-bold text-uppercase small text-muted">
+            {{ p.content_type.model }}
+          </td>
+        </tr>
+        {% endifchanged %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td><code>{{ p.codename }}</code></td>
+          {% for role in roles %}
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input role-checkbox"
+                   data-role="{{ role.pk }}" name="role_{{ role.pk }}" value="{{ p.pk }}"
+                   aria-label="{{ role.name }} — {{ p.name }}"
+                   {% if p.pk in role.perm_ids %}checked{% endif %}>
+          </td>
+          {% endfor %}
+          <td>
+            <a href="{% url 'security:permission_update' p.pk %}" class="btn btn-sm btn-warning">Editar</a>
+            <a href="{% url 'security:permission_delete' p.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ roles|length|add:3 }}" class="text-center">No hay permisos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit" class="btn btn-primary">&#128190; Guardar cambios</button>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.role-select-all').forEach(function (master) {
+    master.addEventListener('change', function () {
+      var roleId = this.dataset.role;
+      document.querySelectorAll('.role-checkbox[data-role="' + roleId + '"]').forEach(function (cb) {
+        cb.checked = master.checked;
+      });
+    });
+  });
+</script>
+{% endblock %}

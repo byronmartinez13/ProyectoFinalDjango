@@ -1,0 +1,114 @@
+{% extends 'billing/base.html' %}
+{% block title %}Emitir Factura #{{ invoice.id }}{% endblock %}
+{% block content %}
+<style>.emit-warn-icon { font-size: 1.3rem; }</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">Confirmar Emisión</h2>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header border-0 py-3 bg-success">
+    <span class="text-white fw-bold">&#9989; Emitir Factura #{{ invoice.id }}</span>
+  </div>
+  <div class="card-body p-4">
+
+    <div class="alert alert-info">
+      <strong>¿Qué ocurre al emitir?</strong>
+      <ul class="mb-0 mt-1">
+        <li>La factura cambia de <strong>Borrador</strong> a <strong>Emitida</strong>.</li>
+        <li>El stock de cada producto se <strong>descuenta automáticamente</strong>.</li>
+        <li>Una vez emitida, la factura no se puede editar (solo anular o sustituir).</li>
+      </ul>
+    </div>
+
+    {% if not can_emit %}
+    <div class="alert alert-danger d-flex align-items-center gap-2">
+      <span class="emit-warn-icon">&#9888;</span>
+      <div>
+        <strong>No se puede emitir:</strong> uno o más productos no tienen stock suficiente.
+        Edita el borrador para ajustar las cantidades.
+      </div>
+    </div>
+    {% endif %}
+
+    <table class="table table-sm table-hover mt-3">
+      <thead class="table-dark">
+        <tr>
+          <th>Producto</th>
+          <th class="text-center">Requerido</th>
+          <th class="text-center">Stock actual</th>
+          <th class="text-center">Stock tras emisión</th>
+          <th class="text-end">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in details_with_status %}
+        <tr class="{% if not row.ok %}table-danger{% elif row.low %}table-warning{% endif %}">
+          <td class="fw-semibold">{{ row.det.product.name }}</td>
+          <td class="text-center">{{ row.det.quantity }}</td>
+          <td class="text-center">
+            {% if not row.ok %}
+              <span class="badge bg-danger">{{ row.det.product.stock }}</span>
+            {% elif row.low %}
+              <span class="badge bg-warning text-dark">{{ row.det.product.stock }}</span>
+            {% else %}
+              <span class="badge bg-success">{{ row.det.product.stock }}</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if not row.ok %}
+              <span class="text-danger fw-bold">Insuficiente</span>
+            {% else %}
+              <span class="{% if row.remaining == 0 %}text-warning fw-semibold{% endif %}">
+                {{ row.remaining }}
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-end">${{ row.det.subtotal }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr>
+          <td colspan="4" class="text-end fw-bold">Total a cobrar:</td>
+          <td class="text-end fw-bold text-primary">${{ invoice.total }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <form method="post" class="mt-3">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold d-block">Forma de pago</label>
+        <div class="btn-group" role="group" aria-label="Forma de pago">
+          <input type="radio" class="btn-check" name="tipo_pago" id="tp-contado" value="contado" autocomplete="off" required>
+          <label class="btn btn-outline-primary" for="tp-contado">&#128181; Contado</label>
+
+          <input type="radio" class="btn-check" name="tipo_pago" id="tp-credito" value="credito" autocomplete="off" required>
+          <label class="btn btn-outline-primary" for="tp-credito">&#128179; Crédito</label>
+        </div>
+        <div class="form-text">
+          Contado: la factura queda pagada de inmediato. Crédito: queda con saldo pendiente,
+          registrable luego desde el módulo de Cobros.
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success" {% if not can_emit %}disabled{% endif %}>
+          &#9989; Confirmar Emisión
+        </button>
+        <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        {% if not can_emit %}
+        <a href="{% url 'billing:invoice_update' invoice.pk %}" class="btn btn-warning">
+          &#9998; Editar Borrador
+        </a>
+        {% endif %}
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

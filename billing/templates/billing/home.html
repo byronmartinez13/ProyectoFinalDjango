@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TecnoStock S.A. – Sistema de Gestión Empresarial</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --brand-blue: #0d6efd;
+      --brand-dark: #0a0e27;
+      --brand-purple: #6f42c1;
+    }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, #0d1b4b 60%, #1a3060 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .hero-navbar {
+      padding: 1.2rem 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .hero-brand {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .hero-brand span { color: var(--brand-blue); }
+    .hero-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .hero-title span { color: #60a5fa; }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: rgba(255,255,255,.65);
+      max-width: 500px;
+    }
+    .badge-pill-soft {
+      background: rgba(99,102,241,.18);
+      color: #a5b4fc;
+      font-size: .72rem;
+      letter-spacing: .06em;
+      padding: .35rem .85rem;
+      border-radius: 50px;
+      display: inline-block;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── SECTIONS ─────────────────────────────────────────── */
+    section { padding: 80px 0; }
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: .5rem;
+    }
+    .section-divider {
+      width: 50px; height: 4px;
+      background: var(--brand-blue);
+      border-radius: 4px;
+      margin: .6rem 0 1.6rem;
+    }
+
+    /* ── ABOUT CARDS ─────────────────────────────────────── */
+    .about-card {
+      border: 0;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.07);
+      transition: transform .2s, box-shadow .2s;
+      height: 100%;
+    }
+    .about-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 36px rgba(0,0,0,.12);
+    }
+    .about-icon {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+
+    /* ── FEATURES ─────────────────────────────────────────── */
+    .features-section { background: #f8f9fa; }
+    .feature-item {
+      display: flex; gap: 1rem; margin-bottom: 1.8rem;
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.2rem;
+    }
+
+    /* ── CONTACT ──────────────────────────────────────────── */
+    .contact-section { background: var(--brand-dark); color: #fff; }
+    .contact-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      height: 100%;
+      transition: background .2s;
+    }
+    .contact-card:hover { background: rgba(255,255,255,.09); }
+    .contact-icon {
+      font-size: 2rem;
+      margin-bottom: .8rem;
+      display: block;
+    }
+    .contact-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.45);
+      margin-bottom: .35rem;
+    }
+    .contact-value {
+      font-size: .95rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.9);
+    }
+    .social-link {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,.1);
+      border-radius: 50%;
+      color: #fff;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: background .2s;
+    }
+    .social-link:hover { background: var(--brand-blue); color: #fff; }
+
+    /* ── FOOTER ───────────────────────────────────────────── */
+    footer {
+      background: #060b1e;
+      color: rgba(255,255,255,.4);
+      text-align: center;
+      padding: 1.5rem 0;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HERO ══════════════════════════════════════════════════════ -->
+<section class="hero">
+
+  <!-- Navbar -->
+  <nav class="hero-navbar">
+    <div class="container d-flex align-items-center justify-content-between">
+      <span class="hero-brand">Tecno<span>Stock</span> S.A.</span>
+      <div class="d-flex gap-2">
+        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm px-4">
+          Iniciar Sesión
+        </a>
+        <a href="{% url 'store:customer_signup' %}" class="btn btn-primary btn-sm px-4">
+          Registrarse
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenido hero -->
+  <div class="hero-body">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="badge-pill-soft">&#127775; Plataforma Empresarial</div>
+          <h1 class="hero-title mb-3">
+            Gestión inteligente<br>para tu <span>empresa</span>
+          </h1>
+          <p class="hero-subtitle mb-4">
+            TecnoStock S.A. ofrece un sistema integral de ventas y compras
+            diseñado para potenciar la eficiencia operativa de negocios en crecimiento.
+          </p>
+          <div class="d-flex flex-wrap gap-3">
+            <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-5">
+              Iniciar Sesión
+            </a>
+            <a href="#contacto" class="btn btn-outline-light btn-lg px-5">
+              Contáctanos
+            </a>
+          </div>
+        </div>
+        <div class="col-lg-6 d-none d-lg-block text-center">
+          <div style="font-size: 10rem; line-height: 1; filter: drop-shadow(0 20px 40px rgba(99,102,241,.4));">
+            &#128201;
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══ NOSOTROS ═══════════════════════════════════════════════════ -->
+<section id="nosotros">
+  <div class="container">
+    <div class="text-center mb-5">
+      <p class="text-muted text-uppercase fw-semibold small letter-spacing">Sobre nosotros</p>
+      <h2 class="section-title">Quiénes somos</h2>
+      <div class="section-divider mx-auto"></div>
+      <p class="text-muted mx-auto" style="max-width: 560px;">
+        Somos una empresa ecuatoriana comprometida con la transformación digital
+        de los negocios mediante soluciones tecnológicas modernas y accesibles.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      <!-- Misión -->
+      <div class="col-md-4">
+        <div class="card about-card p-4">
+          <div class="about-icon bg-primary bg-opacity-10">&#127919;</div>
+          <h5 class="fw-bold mb-2">Misión</h5>
+          <p class="text-muted mb-0">
+            Proveer soluciones tecnológicas innovadoras que optimicen la gestión
+            comercial de empresas en crecimiento, mejorando su competitividad y
+            eficiencia operativa en el mercado ecuatoriano.
+          </p>
+        </div>
+      </div>
+
+      <!-- Visión -->
+      <div class="col-md-4">
+        <div class="card about-card p-4">
+          <div class="about-icon bg-success bg-opacity-10">&#128304;</div>
+          <h5 class="fw-bold mb-2">Visión</h5>
+          <p class="text-muted mb-0">
+            Ser la empresa líder en software de gestión empresarial en Latinoamérica
+            para el año 2030, reconocida por la calidad, innovación y el impacto positivo
+            en los negocios de nuestros clientes.
+          </p>
+        </div>
+      </div>
+
+      <!-- Descripción -->
+      <div class="col-md-4">
+        <div class="card about-card p-4">
+          <div class="about-icon bg-warning bg-opacity-10">&#128640;</div>
+          <h5 class="fw-bold mb-2">¿Qué hacemos?</h5>
+          <p class="text-muted mb-0">
+            Desarrollamos sistemas integrales de gestión de ventas y compras que
+            permiten a las empresas controlar su inventario, facturación, proveedores
+            y clientes desde una sola plataforma.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CARACTERÍSTICAS ════════════════════════════════════════════ -->
+<section class="features-section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <p class="text-muted text-uppercase fw-semibold small">Funcionalidades</p>
+        <h2 class="section-title">Todo lo que tu negocio necesita</h2>
+        <div class="section-divider"></div>
+        <p class="text-muted">
+          Una plataforma completa con módulos de ventas, compras, inventario y reportes,
+          diseñada para ser intuitiva y eficiente.
+        </p>
+      </div>
+      <div class="col-lg-7">
+        <div class="feature-item">
+          <div class="feature-icon bg-primary bg-opacity-10">&#128203;</div>
+          <div>
+            <h6 class="fw-bold mb-1">Módulo de Ventas</h6>
+            <p class="text-muted mb-0 small">Gestiona clientes, facturas y productos con un flujo de trabajo ágil y sin errores.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon bg-success bg-opacity-10">&#128230;</div>
+          <div>
+            <h6 class="fw-bold mb-1">Módulo de Compras</h6>
+            <p class="text-muted mb-0 small">Registra órdenes de compra, controla proveedores y actualiza el stock automáticamente.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon bg-warning bg-opacity-10">&#128202;</div>
+          <div>
+            <h6 class="fw-bold mb-1">Reportes e Inventario</h6>
+            <p class="text-muted mb-0 small">Exporta reportes en PDF y Excel, y mantén el control del stock en tiempo real.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon bg-info bg-opacity-10">&#128274;</div>
+          <div>
+            <h6 class="fw-bold mb-1">Seguridad y Control de Acceso</h6>
+            <p class="text-muted mb-0 small">Sistema de roles y permisos para proteger la información de tu empresa.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONTACTO ═══════════════════════════════════════════════════ -->
+<section class="contact-section" id="contacto">
+  <div class="container">
+    <div class="text-center mb-5">
+      <p class="text-uppercase fw-semibold small" style="color: rgba(255,255,255,.5); letter-spacing: .08em;">Ponte en contacto</p>
+      <h2 class="section-title text-white">Contáctanos</h2>
+      <div class="section-divider mx-auto"></div>
+      <p style="color: rgba(255,255,255,.55);">
+        Estamos disponibles para responder tus preguntas y ayudarte a comenzar.
+      </p>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <div class="col-md-3">
+        <div class="contact-card">
+          <span class="contact-icon">&#128222;</span>
+          <div class="contact-label">Teléfono</div>
+          <div class="contact-value">+593 4 234-5678</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="contact-card">
+          <span class="contact-icon">&#128205;</span>
+          <div class="contact-label">Dirección</div>
+          <div class="contact-value">Av. Kennedy Norte, Edif. TecnoPlaza, Of. 302 – Guayaquil, Ecuador</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="contact-card">
+          <span class="contact-icon">&#128231;</span>
+          <div class="contact-label">Correo Electrónico</div>
+          <div class="contact-value">info@tecnostock.ec</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="contact-card">
+          <span class="contact-icon">&#127760;</span>
+          <div class="contact-label">Redes Sociales</div>
+          <div class="d-flex justify-content-center gap-2 mt-2">
+            <a href="#" class="social-link" title="Instagram">&#128247;</a>
+            <a href="#" class="social-link" title="LinkedIn">&#128101;</a>
+            <a href="#" class="social-link" title="Twitter / X">&#128038;</a>
+          </div>
+          <div class="contact-value mt-2">@TecnoStockEC</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-5 me-2">
+        Iniciar Sesión
+      </a>
+      <a href="{% url 'store:customer_signup' %}" class="btn btn-outline-light btn-lg px-5">
+        Registrarse
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <p class="mb-0">
+      &copy; 2025 TecnoStock S.A. – Todos los derechos reservados.
+      &nbsp;|&nbsp; Guayaquil, Ecuador
+    </p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

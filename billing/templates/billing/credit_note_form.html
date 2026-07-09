@@ -1,0 +1,79 @@
+{% extends 'billing/base.html' %}
+{% block title %}Nota de Crédito — Factura #{{ invoice.id }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">Nueva Nota de Crédito</h2>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header border-0 py-3 bg-warning">
+    <span class="fw-bold text-dark">&#128196; Nota de Crédito sobre Factura #{{ invoice.id }}</span>
+  </div>
+  <div class="card-body p-4">
+
+    <!-- Info de la factura original -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Cliente</small>
+          <div class="dm-value">{{ invoice.customer.full_name }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Fecha de Factura</small>
+          <div class="dm-value">{{ invoice.invoice_date|date:"d/m/Y" }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Total de Factura</small>
+          <div class="dm-value fw-bold">${{ invoice.total }}</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{{ form.tipo.label }}</label>
+          {{ form.tipo }}
+          {% for error in form.tipo.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{{ form.amount.label }}</label>
+          {{ form.amount }}
+          <div class="form-text">Máximo permitido: ${{ invoice.total }}</div>
+          {% for error in form.amount.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold">{{ form.reason.label }}</label>
+          {{ form.reason }}
+          {% for error in form.reason.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-warning">Registrar Nota de Crédito</button>
+        <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

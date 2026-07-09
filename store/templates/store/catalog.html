@@ -1,0 +1,78 @@
+{% extends 'billing/base.html' %}
+{% block title %}Tienda{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h2 class="mb-0">&#128230; Catálogo de Productos</h2>
+  <a href="{% url 'store:cart' %}" class="btn btn-outline-primary btn-sm">&#128722; Ver carrito</a>
+</div>
+
+<form method="get" class="mb-4">
+  {% if search_params.group %}<input type="hidden" name="group" value="{{ search_params.group }}">{% endif %}
+  <div class="input-group">
+    <input type="text" name="q" class="form-control" placeholder="Buscar productos por nombre, descripción o marca..."
+           value="{{ search_params.q|default:'' }}">
+    <button type="submit" class="btn btn-primary">&#128269; Buscar</button>
+    {% if search_params.q %}
+    <a href="?{% if search_params.group %}group={{ search_params.group }}{% endif %}" class="btn btn-outline-secondary">Limpiar</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="row">
+  <!-- ── Sidebar de categorías ─────────────────────────────────── -->
+  <div class="col-md-3 mb-4">
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-transparent fw-semibold">Categorías</div>
+      <div class="list-group list-group-flush">
+        <a href="?{% if search_params.q %}q={{ search_params.q }}{% endif %}"
+           class="list-group-item list-group-item-action {% if not search_params.group %}active{% endif %}">
+          Todas
+        </a>
+        {% for cat in categories %}
+        <a href="?group={{ cat.pk }}{% if search_params.q %}&q={{ search_params.q }}{% endif %}"
+           class="list-group-item list-group-item-action {% if search_params.group == cat.pk|stringformat:'s' %}active{% endif %}">
+          {{ cat.name }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Grilla de productos ──────────────────────────────────── -->
+  <div class="col-md-9">
+    <p class="text-muted small">{{ paginator.count }} producto(s) encontrado(s).</p>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+      {% for item in items %}
+      <div class="col">
+        <div class="card h-100 shadow-sm border-0 rounded-4">
+          <img src="{{ item.photo_url }}" class="card-img-top" alt="{{ item.name }}"
+               style="height: 180px; object-fit: cover;">
+          <div class="card-body d-flex flex-column">
+            <h6 class="fw-bold mb-1">{{ item.name }}</h6>
+            <p class="text-muted small mb-2">{{ item.brand.name }} &middot; {{ item.group.name }}</p>
+            <p class="text-muted small flex-grow-1">{{ item.description|default:''|truncatewords:15 }}</p>
+            <div class="d-flex align-items-center justify-content-between mt-2">
+              <span class="fw-bold fs-5 text-primary">${{ item.unit_price }}</span>
+              {% if item.stock == 0 %}
+                <span class="badge bg-secondary">Agotado</span>
+              {% endif %}
+            </div>
+            <form method="post" action="{% url 'store:add_to_cart' item.pk %}" class="mt-3">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary w-100" {% if item.stock == 0 %}disabled{% endif %}>
+                &#128722; Añadir al carrito
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-center text-muted">No se encontraron productos.</p>
+      {% endfor %}
+    </div>
+
+    {% include 'billing/_pagination.html' %}
+  </div>
+</div>
+{% endblock %}

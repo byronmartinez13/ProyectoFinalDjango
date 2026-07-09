@@ -1,0 +1,69 @@
+{% extends 'billing/base.html' %}
+{% block title %}Cobros — Facturas a Crédito{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="mb-0">Cuentas por Cobrar — Facturas a Crédito</h2>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+  <div class="btn-group" role="group" aria-label="Filtrar por estado de cobro">
+    <a href="?estado=PENDIENTE{% if q %}&q={{ q }}{% endif %}"
+       class="btn btn-sm {% if estado_cobro == 'PENDIENTE' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+      Pendientes
+    </a>
+    <a href="?estado=PAGADA{% if q %}&q={{ q }}{% endif %}"
+       class="btn btn-sm {% if estado_cobro == 'PAGADA' %}btn-success{% else %}btn-outline-success{% endif %}">
+      Pagadas
+    </a>
+    <a href="?estado={% if q %}&q={{ q }}{% endif %}"
+       class="btn btn-sm {% if estado_cobro != 'PENDIENTE' and estado_cobro != 'PAGADA' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+      Todas
+    </a>
+  </div>
+
+  <form method="get" class="ms-auto">
+    <input type="hidden" name="estado" value="{{ estado_cobro }}">
+    <div class="d-flex gap-2">
+      <input type="text" name="q" class="form-control form-control-sm"
+             placeholder="N° factura, nombre o DNI del cliente" value="{{ q|default:'' }}">
+      <button type="submit" class="btn btn-secondary btn-sm">Buscar</button>
+      <a href="{% url 'creditoventa:factura_list' %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+    </div>
+  </form>
+</div>
+
+<table class="table table-striped table-hover table-sm align-middle">
+  <thead class="table-dark">
+    <tr>
+      <th>#</th><th>Cliente</th><th>Fecha</th>
+      <th class="text-end">Total</th>
+      <th class="text-end">Cobrado</th>
+      <th class="text-end">Saldo</th>
+      <th>Estado</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for factura in items %}
+    <tr>
+      <td>{{ factura.id }}</td>
+      <td>{{ factura.customer }}</td>
+      <td>{{ factura.invoice_date|date:"d/m/Y" }}</td>
+      <td class="text-end">${{ factura.total }}</td>
+      <td class="text-end text-muted">${{ factura.cobrado }}</td>
+      <td class="text-end fw-bold">${{ factura.saldo }}</td>
+      <td><span class="badge {{ factura.estado_cobro_badge_class }}">{{ factura.get_estado_cobro_display }}</span></td>
+      <td class="d-flex gap-2">
+        {% if factura.pendiente_de_pago %}
+        <a href="{% url 'creditoventa:cobro_create' factura.id %}" class="btn btn-sm btn-success">&#128176; Registrar pago</a>
+        {% endif %}
+        <a href="{% url 'creditoventa:historial_pagos' factura.id %}" class="btn btn-sm btn-outline-primary">&#128220; Historial</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8" class="text-center">No hay facturas que coincidan con el filtro.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

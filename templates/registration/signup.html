@@ -1,0 +1,35 @@
+{% extends 'billing/base.html' %}
+{% block title %}Nuevo Usuario{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow">
+      <div class="card-header bg-success text-white"><h4>Crear Usuario</h4></div>
+      <div class="card-body">
+        <p class="text-muted">
+          Solo el Administrador puede crear cuentas. Define una contraseña
+          temporal y compártela con la persona: podrá cambiarla luego desde
+          "Contraseña" en el menú una vez que inicie sesión.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            <small class="text-muted">{{ field.help_text }}</small>
+            {% for error in field.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-success w-100">Crear Usuario</button>
+        </form>
+        <p class="mt-3 text-center">
+          <a href="{% url 'security:user_list' %}">&larr; Volver al listado de usuarios</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

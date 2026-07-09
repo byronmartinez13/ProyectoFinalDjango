@@ -1,0 +1,32 @@
+{% extends 'billing/base.html' %}
+{% block title %}Pedido Confirmado{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-md-7 text-center">
+    <div class="card shadow-sm border-0 rounded-4 p-4">
+      <div style="font-size: 4rem;">&#9989;</div>
+      <h2 class="mt-2">¡Pedido confirmado!</h2>
+      <p class="text-muted">
+        Tu pedido #{{ invoice.id }} fue pagado con
+        {{ invoice.get_payment_method_display }} y está siendo procesado.
+      </p>
+      <table class="table table-sm mt-3">
+        <tbody>
+          {% for d in invoice.details.all %}
+          <tr>
+            <td class="text-start">{{ d.product.name }} x {{ d.quantity }}</td>
+            <td class="text-end">${{ d.subtotal }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="fw-bold">
+            <td class="text-start">Total</td>
+            <td class="text-end text-primary">${{ invoice.total }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <a href="{% url 'store:catalog' %}" class="btn btn-primary mt-3">Seguir comprando</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'billing/base.html' %}
+{% block title %}Anular Factura #{{ invoice.id }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">Anular Factura</h2>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header border-0 py-3 bg-danger">
+    <span class="text-white fw-bold">&#128683; Anular Factura #{{ invoice.id }}</span>
+  </div>
+  <div class="card-body p-4">
+
+    <div class="alert alert-warning">
+      <strong>¿Qué ocurre al anular?</strong>
+      <ul class="mb-0 mt-1">
+        <li>La factura cambia de <strong>Emitida</strong> a <strong>Anulada</strong>.</li>
+        <li>El stock de cada producto se <strong>revierte automáticamente</strong> (se devuelven las unidades).</li>
+        <li>La factura queda visible en el sistema como registro histórico con estado "Anulada".</li>
+        <li>Esta acción <strong>no se puede deshacer</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Factura</small>
+          <div class="dm-value">#{{ invoice.id }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Cliente</small>
+          <div class="dm-value">{{ invoice.customer.full_name }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dm-field">
+          <small class="dm-label">Total</small>
+          <div class="dm-value fw-bold text-danger">${{ invoice.total }}</div>
+        </div>
+      </div>
+    </div>
+
+    <h6 class="text-muted text-uppercase fw-semibold mb-2 dm-section-label">Productos que regresarán al stock</h6>
+    <table class="table table-sm table-hover mb-4">
+      <thead class="table-dark">
+        <tr>
+          <th>Producto</th>
+          <th class="text-center">Stock actual</th>
+          <th class="text-center">Cantidad a devolver</th>
+          <th class="text-center">Stock resultante</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for det in invoice.details.all %}
+        <tr>
+          <td>{{ det.product.name }}</td>
+          <td class="text-center">{{ det.product.stock }}</td>
+          <td class="text-center text-success fw-semibold">+{{ det.quantity }}</td>
+          <td class="text-center fw-semibold">{{ det.product.stock|add:det.quantity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">&#128683; Confirmar Anulación</button>
+      <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'billing/base.html' %}
+{% block title %}Eliminar pago{% endblock %}
+{% block content %}
+
+<h2 class="mb-4">Eliminar pago</h2>
+
+<div class="card border-0 shadow-sm rounded-4" style="max-width: 480px;">
+  <div class="card-body">
+    <p>¿Confirma que desea eliminar el abono <strong>#{{ pago.id }}</strong> de
+      <strong>${{ pago.valor }}</strong> registrado el {{ pago.fecha|date:"d/m/Y" }}
+      sobre la Compra #{{ compra.id }}?</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+      <a href="{% url 'pagos:historial_pagos' compra.id %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

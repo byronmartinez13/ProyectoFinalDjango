@@ -1,0 +1,57 @@
+{% extends 'billing/base.html' %}
+{% block title %}Nota de Crédito – Compra #{{ purchase.id }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'purchasing:purchase_detail' purchase.pk %}"
+     class="btn btn-outline-secondary btn-sm">&#8592; Volver</a>
+  <h2 class="mb-0">Nueva Nota de Crédito a Proveedor</h2>
+</div>
+
+<div class="alert alert-info mb-4">
+  Asociando a <strong>Compra #{{ purchase.id }}</strong>
+  — <strong>{{ purchase.supplier.name }}</strong>
+  — Total: <strong>${{ purchase.total }}</strong>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.tipo.label }}</label>
+        {{ form.tipo }}
+        {% if form.tipo.errors %}
+          <div class="invalid-feedback d-block">{{ form.tipo.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.amount.label }}</label>
+        {{ form.amount }}
+        {% if form.amount.errors %}
+          <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">{{ form.reason.label }}</label>
+        {{ form.reason }}
+        {% if form.reason.errors %}
+          <div class="invalid-feedback d-block">{{ form.reason.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-warning fw-semibold">
+          &#128196; Registrar Nota de Crédito
+        </button>
+        <a href="{% url 'purchasing:purchase_detail' purchase.pk %}"
+           class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
