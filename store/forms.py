@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
 
 from billing.models import Customer
+from shared.validators import validate_only_letters, validate_phone_ec
 
 _CUSTOMER_WIDGETS = {
     'dni':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 0912345678', 'maxlength': '13'}),
@@ -14,10 +15,10 @@ _CUSTOMER_WIDGETS = {
 class CustomerSignUpForm(UserCreationForm):
     """Registro público: crea el User (rol Cliente) y su Customer vinculado."""
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-    first_name = forms.CharField(max_length=100, label='Nombres', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(max_length=100, label='Apellidos', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    first_name = forms.CharField(max_length=100, label='Nombres', validators=[validate_only_letters], widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(max_length=100, label='Apellidos', validators=[validate_only_letters], widget=forms.TextInput(attrs={'class': 'form-control'}))
     dni = forms.CharField(max_length=13, label='DNI / RUC', widget=_CUSTOMER_WIDGETS['dni'])
-    phone = forms.CharField(max_length=20, label='Teléfono', required=False, widget=_CUSTOMER_WIDGETS['phone'])
+    phone = forms.CharField(max_length=20, label='Teléfono', required=False, validators=[validate_phone_ec], widget=_CUSTOMER_WIDGETS['phone'])
     address = forms.CharField(label='Dirección', required=False, widget=_CUSTOMER_WIDGETS['address'])
 
     class Meta:

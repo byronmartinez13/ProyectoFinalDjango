@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django import forms
+from django.db.models import Sum
 from django.forms import inlineformset_factory
 from .models import Purchase, PurchaseDetail, SupplierCreditNote
 
@@ -78,6 +81,8 @@ PurchaseDetailEditFormSet = inlineformset_factory(
 
 
 class SupplierCreditNoteForm(forms.ModelForm):
+    """Recibe `purchase` desde la vista para validar que el monto no supere
+    el saldo disponible de la compra (total menos notas de crédito previas)."""
     class Meta:
         model  = SupplierCreditNote
         fields = ['tipo', 'amount', 'reason']
@@ -94,3 +99,24 @@ class SupplierCreditNoteForm(forms.ModelForm):
                           'class': 'form-control', 'rows': 3,
                           'placeholder': 'Describa el motivo de la devolución o descuento…'}),
         }
+        error_messages = {
+            'reason': {'min_length': 'El motivo debe tener al menos 5 caracteres.'},
+        }
+
+    def __init__(self, *args, purchase=None, **kwargs):
+        self.purchase = purchase
+        super().__init__(*args, **kwargs)
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is None or self.purchase is None:
+            return amount
+
+        ya_acreditado = self.purchase.credit_notes.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        disponible = self.purchase.total - ya_acreditado
+        if amount > disponible:
+            raise forms.ValidationError(
+                f'El monto (${amount}) supera el saldo disponible para nota de '
+                f'crédito de la compra (${disponible}).'
+            )
+        return amount

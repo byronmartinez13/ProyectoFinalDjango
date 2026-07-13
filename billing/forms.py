@@ -1,14 +1,18 @@
+from decimal import Decimal
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
+from django.db.models import Sum
 from django.forms import inlineformset_factory
+from shared.validators import validate_only_letters
 from .models import Brand, Invoice, InvoiceDetail, CreditNote, Customer, Supplier
 
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class':'form-control'}))
-    first_name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class':'form-control'}))
-    last_name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class':'form-control'}))
+    first_name = forms.CharField(max_length=100, validators=[validate_only_letters], widget=forms.TextInput(attrs={'class':'form-control'}))
+    last_name = forms.CharField(max_length=100, validators=[validate_only_letters], widget=forms.TextInput(attrs={'class':'form-control'}))
     role = forms.ModelChoiceField(
         queryset=Group.objects.all().order_by('name'),
         required=False,
@@ -114,7 +118,12 @@ class SupplierQuickForm(forms.ModelForm):
 
 
 class CreditNoteForm(forms.ModelForm):
-    """Formulario para crear una Nota de Crédito sobre una factura emitida."""
+    """Formulario para crear una Nota de Crédito sobre una factura emitida.
+
+    Recibe `invoice` desde la vista para validar que el monto no supere el
+    saldo disponible de la factura (total menos notas de crédito previas),
+    siguiendo el mismo patrón que PagoCompraForm/CobroFacturaForm.
+    """
     class Meta:
         model  = CreditNote
         fields = ['tipo', 'amount', 'reason']
@@ -129,3 +138,24 @@ class CreditNoteForm(forms.ModelForm):
             'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3,
                                             'placeholder': 'Describa el motivo de la devolución o descuento…'}),
         }
+        error_messages = {
+            'reason': {'min_length': 'El motivo debe tener al menos 5 caracteres.'},
+        }
+
+    def __init__(self, *args, invoice=None, **kwargs):
+        self.invoice = invoice
+        super().__init__(*args, **kwargs)
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is None or self.invoice is None:
+            return amount
+
+        ya_acreditado = self.invoice.credit_notes.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        disponible = self.invoice.total - ya_acreditado
+        if amount > disponible:
+            raise forms.ValidationError(
+                f'El monto (${amount}) supera el saldo disponible para nota de '
+                f'crédito de la factura (${disponible}).'
+            )
+        return amount

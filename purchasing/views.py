@@ -229,7 +229,7 @@ def supplier_credit_note_create(request, pk):
         return redirect('purchasing:purchase_detail', pk=pk)
 
     if request.method == 'POST':
-        form = SupplierCreditNoteForm(request.POST)
+        form = SupplierCreditNoteForm(request.POST, purchase=purchase)
         if form.is_valid():
             note          = form.save(commit=False)
             note.purchase = purchase
@@ -238,7 +238,7 @@ def supplier_credit_note_create(request, pk):
                 f'Nota de crédito NC-P{note.id} registrada sobre Compra #{purchase.id}.')
             return redirect('purchasing:purchase_detail', pk=purchase.pk)
     else:
-        form = SupplierCreditNoteForm(initial={
+        form = SupplierCreditNoteForm(purchase=purchase, initial={
             'amount': purchase.total,
             'tipo':   SupplierCreditNote.TIPO_TOTAL,
         })

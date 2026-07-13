@@ -298,3 +298,74 @@ Partial reutilizable con botones PDF y Excel. La función JS `exportList(fmt)` a
 
 - **`StockMovement`**: registro inmutable de cada movimiento de stock. Campos: FK → `Product`, `quantity` (+ entrada / − salida), `movement_type` (VENTA / DEV_VENTA / COMPRA / DEV_COMPRA / ENT_MANUAL / SAL_MANUAL), `date` (auto), FK → `User` (nullable), FK opcional → `Invoice`, FK opcional → `Purchase`, `notes`.
 - Registra automáticamente un movimiento al confirmar o anular facturas y compras.
+
+---
+
+## Facturación electrónica y refuerzo de validaciones *(sesión actual)*
+
+### `billing/pdf.py` *(creado)*
+
+`build_invoice_pdf(invoice) → bytes`: se extrajo el generador de PDF de factura (ReportLab) que antes vivía dentro de `billing/views.py::invoice_pdf`, para poder reutilizar el mismo layout tanto en la descarga manual como en el correo de facturación electrónica, sin duplicar código.
+
+### `billing/views.py`
+
+- `invoice_pdf` ahora delega la generación del PDF en `billing/pdf.py::build_invoice_pdf()`; el resultado (bytes, nombre de archivo) es idéntico al de antes.
+- `credit_note_create`: pasa `invoice=invoice` a `CreditNoteForm` (GET y POST) para poder validar el monto contra el saldo disponible de la factura.
+
+### `shared/emails.py`
+
+- **`send_invoice_email(invoice)`** *(nuevo)*: envía la factura electrónica al correo del cliente con el PDF adjunto (generado con `billing/pdf.py`). Si el cliente no tiene correo registrado, o el envío falla, se registra en el log y **no** interrumpe la emisión de la factura — mismo criterio de "fallo silencioso" que ya usaba `send_welcome_email`.
+
+### `billing/services.py`
+
+- `emit_invoice()`: al final de la emisión (fuera de la transacción atómica, con la factura ya confirmada en BD) llama a `send_invoice_email(invoice)`. Al ser el único punto de emisión compartido entre la venta manual (Vendedor/Administrador) y el checkout de la Tienda, ambos flujos disparan el envío automáticamente sin duplicar lógica.
+
+### `shared/validators.py`
+
+- **`validate_only_letters(value)`** *(nuevo)*: exige solo letras (con tildes/Ñ), con espacios o guiones simples entre palabras. Usado en nombres/apellidos.
+- **`validate_phone_ec(value)`** *(nuevo)*: exige un teléfono ecuatoriano válido (convencional 7-9 dígitos, celular 10 dígitos que inicia en 0, o `+593` + 9 dígitos).
+
+### `billing/models.py`
+
+- `Supplier.contact_name`: validador `validate_only_letters`. `Supplier.phone`: validador `validate_phone_ec`.
+- `Customer.first_name` / `last_name`: validador `validate_only_letters`. `Customer.phone`: validador `validate_phone_ec`.
+- `InvoiceDetail.quantity`: `MinValueValidator(1)` (ya no admite cantidades en cero o negativas).
+- `CreditNote.amount`: `MinValueValidator(0.01)`. `CreditNote.reason`: `MinLengthValidator(5)`.
+- Migración `0012_alter_creditnote_amount_alter_creditnote_reason_and_more`.
+
+### `purchasing/models.py`
+
+- `PurchaseDetail.quantity`: `MinValueValidator(1)` (antes `PositiveIntegerField` admitía 0).
+- `SupplierCreditNote.amount`: `MinValueValidator(0.01)`. `SupplierCreditNote.reason`: `MinLengthValidator(5)`.
+- Migración `0005_alter_purchasedetail_quantity_and_more`.
+
+### `billing/forms.py`
+
+- `CreditNoteForm`: recibe `invoice` en `__init__`; `clean_amount()` valida que el monto no supere el saldo disponible de la factura (total menos notas de crédito previas).
+- `SignUpForm`: `first_name`/`last_name` con validador `validate_only_letters`.
+
+### `purchasing/forms.py`
+
+- `SupplierCreditNoteForm`: recibe `purchase` en `__init__`; `clean_amount()` valida que el monto no supere el saldo disponible de la compra.
+
+### `purchasing/views.py`
+
+- `supplier_credit_note_create`: pasa `purchase=purchase` a `SupplierCreditNoteForm` (GET y POST).
+
+### `store/forms.py`
+
+- `CustomerSignUpForm`: `first_name`/`last_name` con validador `validate_only_letters`; `phone` con validador `validate_phone_ec`.
+
+### `security/forms.py`
+
+- `UserUpdateForm`: `clean_first_name()` / `clean_last_name()` aplican `validate_only_letters` (el Administrador edita nombres de cualquier usuario).
+
+### `billing/tests.py`
+
+- Tests para `validate_only_letters` / `validate_phone_ec`.
+- Tests que verifican que `emit_invoice()` envía la factura electrónica con el PDF adjunto, y que omite el envío en silencio (sin lanzar excepción) cuando el cliente no tiene correo.
+- Tests de `CreditNoteForm`: rechaza monto por encima del saldo disponible, rechaza motivo demasiado corto, acepta una nota de crédito válida.
+
+### `requirements.txt`
+
+- Reescrito en UTF-8 estándar (antes estaba en UTF-16, lo que dificultaba diffs y ediciones). Mismas dependencias y versiones; la facturación electrónica no requiere paquetes nuevos (usa `django.core.mail`, incluido en Django).

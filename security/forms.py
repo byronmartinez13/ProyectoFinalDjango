@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import User, Group, Permission
 
+from shared.validators import validate_only_letters
+
 
 # === RECUPERAR CONTRASEÑA POR USUARIO (no por email) ===
 class UsernamePasswordResetForm(PasswordResetForm):
@@ -53,6 +55,18 @@ class UserUpdateForm(forms.ModelForm):
             'email':      forms.EmailInput(attrs={'class': 'form-control'}),
             'is_active':  forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_first_name(self):
+        value = self.cleaned_data.get('first_name')
+        if value:
+            validate_only_letters(value)
+        return value
+
+    def clean_last_name(self):
+        value = self.cleaned_data.get('last_name')
+        if value:
+            validate_only_letters(value)
+        return value
 
 
 # === ROLES (Group) CON SUS PERMISOS ===

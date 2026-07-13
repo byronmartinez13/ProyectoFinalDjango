@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.core.validators import MinValueValidator, MinLengthValidator
 from django.db import models
 from billing.models import Supplier, Product
 from shared.money import round_money
@@ -113,7 +114,7 @@ class PurchaseDetail(models.Model):
     product    = models.ForeignKey(
                      Product, on_delete=models.PROTECT,
                      related_name='purchase_details', verbose_name='Producto')
-    quantity   = models.PositiveIntegerField(verbose_name='Cantidad')
+    quantity   = models.PositiveIntegerField(verbose_name='Cantidad', validators=[MinValueValidator(1)])
     unit_cost  = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Unitario')
     subtotal   = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Subtotal')
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='IVA')
@@ -146,8 +147,12 @@ class SupplierCreditNote(models.Model):
     tipo      = models.CharField(
                     max_length=10, choices=TIPO_CHOICES,
                     default=TIPO_TOTAL, verbose_name='Tipo')
-    amount    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Monto')
-    reason    = models.CharField(max_length=300, verbose_name='Motivo')
+    amount    = models.DecimalField(
+                    max_digits=12, decimal_places=2, verbose_name='Monto',
+                    validators=[MinValueValidator(Decimal('0.01'))])
+    reason    = models.CharField(
+                    max_length=300, verbose_name='Motivo',
+                    validators=[MinLengthValidator(5)])
     is_active = models.BooleanField(default=True)
 
     class Meta:

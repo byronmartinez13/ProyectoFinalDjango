@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import F
 
 from inventory.models import StockMovement
+from shared.emails import send_invoice_email
 from shared.money import round_money
 
 
@@ -65,3 +66,10 @@ def emit_invoice(invoice, user, tipo_pago=None):
             invoice.saldo        = invoice.total
             invoice.estado_cobro = Invoice.PAGADA if invoice.total <= 0 else Invoice.PENDIENTE
         invoice.save()
+
+    # Facturación electrónica: se envía fuera de la transacción (ya
+    # confirmada en BD) para no mantener el bloqueo abierto mientras se
+    # contacta al servidor SMTP. send_invoice_email() nunca lanza excepción
+    # (falla en silencio y registra en el log), así que un problema de correo
+    # jamás revierte la emisión de la factura ni el descuento de stock.
+    send_invoice_email(invoice)

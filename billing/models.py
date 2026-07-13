@@ -1,8 +1,8 @@
 from decimal import Decimal
 from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 from django.db import models
-from shared.validators import validate_cedula_ec
+from shared.validators import validate_cedula_ec, validate_only_letters, validate_phone_ec
 from shared.money import round_money
 
 # Create your models here.
@@ -34,9 +34,9 @@ class ProductGroup(models.Model):
 class Supplier(models.Model):
     """Proveedores. M2M con Product."""
     name = models.CharField(max_length=200, verbose_name='Company Name')
-    contact_name = models.CharField(max_length=200, blank=True, null=True)
+    contact_name = models.CharField(max_length=200, blank=True, null=True, validators=[validate_only_letters])
     email = models.EmailField(blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True, validators=[validate_phone_ec])
     address = models.TextField(blank=True, null=True)
     photo = models.ImageField(upload_to='suppliers/', blank=True, null=True, verbose_name='Logo')
     is_active = models.BooleanField(default=True)
@@ -95,10 +95,10 @@ class Customer(models.Model):
                      on_delete=models.SET_NULL, related_name='customer_account',
                      verbose_name='Cuenta de usuario')
     dni        = models.CharField(max_length=13, unique=True, verbose_name='DNI/RUC', validators=[validate_cedula_ec])
-    first_name = models.CharField(max_length=100)
-    last_name  = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=100, validators=[validate_only_letters])
+    last_name  = models.CharField(max_length=100, validators=[validate_only_letters])
     email      = models.EmailField(blank=True, null=True)
-    phone      = models.CharField(max_length=20, blank=True, null=True)
+    phone      = models.CharField(max_length=20, blank=True, null=True, validators=[validate_phone_ec])
     address    = models.TextField(blank=True, null=True)
     photo      = models.ImageField(upload_to='customer/', blank=True, null=True, verbose_name='Foto')
     is_active  = models.BooleanField(default=True)
@@ -231,7 +231,7 @@ class InvoiceDetail(models.Model):
     """Líneas de factura."""
     invoice      = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='details')
     product      = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='invoice_details')
-    quantity     = models.IntegerField(default=1)
+    quantity     = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     unit_price   = models.DecimalField(max_digits=12, decimal_places=2)
     discount_pct = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
@@ -266,8 +266,12 @@ class CreditNote(models.Model):
     tipo      = models.CharField(
                     max_length=10, choices=TIPO_CHOICES,
                     default=TIPO_TOTAL, verbose_name='Tipo')
-    amount    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Monto')
-    reason    = models.CharField(max_length=300, verbose_name='Motivo')
+    amount    = models.DecimalField(
+                    max_digits=12, decimal_places=2, verbose_name='Monto',
+                    validators=[MinValueValidator(Decimal('0.01'))])
+    reason    = models.CharField(
+                    max_length=300, verbose_name='Motivo',
+                    validators=[MinLengthValidator(5)])
     is_active = models.BooleanField(default=True)
 
     class Meta:

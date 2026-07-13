@@ -1,4 +1,39 @@
+import re
+
 from django.core.exceptions import ValidationError
+
+_LETTERS_RE = re.compile(r'^[A-Za-zÀ-ÖØ-öø-ÿÑñ]+(?:[ \'-][A-Za-zÀ-ÖØ-öø-ÿÑñ]+)*$')
+
+
+def validate_only_letters(value):
+    """Valida que el valor contenga solo letras (incluye tildes y Ñ),
+    con espacios simples o guiones entre palabras (ej. "José Luis",
+    "Pérez-Vera"). Se usa en nombres y apellidos de clientes/usuarios."""
+    if not _LETTERS_RE.match((value or '').strip()):
+        raise ValidationError(
+            'Este campo solo debe contener letras (sin números ni símbolos).',
+            code='invalid_letters',
+        )
+
+
+def validate_phone_ec(value):
+    """Valida un teléfono ecuatoriano: convencional (7-9 dígitos), celular
+    (10 dígitos, inicia en 0) o formato internacional +593 seguido de 9
+    dígitos."""
+    cleaned = (value or '').strip().replace(' ', '').replace('-', '')
+
+    if cleaned.startswith('+593'):
+        digits = cleaned[4:]
+        valid = digits.isdigit() and len(digits) == 9
+    else:
+        valid = cleaned.isdigit() and 7 <= len(cleaned) <= 10
+
+    if not valid:
+        raise ValidationError(
+            'Ingresa un teléfono válido: 7 a 10 dígitos (ej. 0991234567) '
+            'o +593 seguido de 9 dígitos.',
+            code='invalid_phone',
+        )
 
 
 def validate_cedula_ec(value):
