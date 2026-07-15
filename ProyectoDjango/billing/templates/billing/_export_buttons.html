@@ -1,0 +1,23 @@
+{% comment %}
+Requiere pasar pdf_perm / excel_perm al incluir este partial, p.ej.:
+{% include 'billing/_export_buttons.html' with pdf_perm='billing.export_product_pdf' excel_perm='billing.export_product_excel' %}
+Cada modelo exportable tiene su propio par de permisos — ver shared/mixins.py::ExportMixin.
+{% endcomment %}
+{% if pdf_perm in perms %}
+<button type="button" class="btn btn-danger btn-sm" onclick="exportList('pdf')">
+  &#128196; PDF
+</button>
+{% endif %}
+{% if excel_perm in perms %}
+<button type="button" class="btn btn-success btn-sm" onclick="exportList('excel')">
+  &#128202; Excel
+</button>
+{% endif %}
+<script>
+  function exportList(fmt) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('export', fmt);
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+  }
+</script>
